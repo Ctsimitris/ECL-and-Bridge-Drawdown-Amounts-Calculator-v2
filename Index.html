@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECL and Bridge Drawdown Amounts Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --eqt-orange:    #FF6600;
+  --eqt-orange-dk: #CC5200;
+  --eqt-orange-lt: #FFF5EE;
+  --eqt-orange-md: #FFD9BC;
+  --eqt-dark:      #141414;
+  --eqt-dark-2:    #1E1E1E;
+  --eqt-dark-3:    #2A2A2A;
+
+  --bg:         #FFD9B3;
+  --surface:    #FFFFFF;
+  --surface-2:  #FFF3E8;
+  --border:     #E8EAED;
+  --border-md:  #D1D5DB;
+  --border-dk:  #B8BEC7;
+
+  --text:       #111827;
+  --text-2:     #374151;
+  --text-3:     #6B7280;
+  --text-4:     #9CA3AF;
+
+  --green:      #059669;
+  --green-lt:   #ECFDF5;
+  --green-md:   #A7F3D0;
+  --green-dk:   #047857;
+
+  --red:        #DC2626;
+  --red-lt:     #FEF2F2;
+  --red-bd:     #FECACA;
+
+  --amber:      #B45309;
+  --amber-lt:   #FFFBEB;
+
+  --purple:     #7C3AED;
+  --purple-lt:  #F5F3FF;
+  --purple-bd:  #DDD6FE;
+
+  --tag-eur-bg:#EFF6FF;  --tag-eur-tx:#1D4ED8;
+  --tag-usd-bg:#F0FDF4;  --tag-usd-tx:#166534;
+  --tag-usr-bg:#FFF7ED;  --tag-usr-tx:#C2410C;
+  --tag-auto-bg:#F5F3FF; --tag-auto-tx:#6D28D9;
+  --tag-ccy-bg:#F3F4F6;  --tag-ccy-tx:#374151;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
+  --shadow-orange: 0 4px 16px rgba(255,102,0,0.25);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══ HEADER ══ */
+.header {
+  background: linear-gradient(135deg, #0D0D0D 0%, #1A1A1A 50%, #0D0D0D 100%);
+  padding: 0 48px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--eqt-orange) 20%, var(--eqt-orange) 80%, transparent 100%);
+}
+
+.header-logo { display:flex; align-items:center; gap:20px; }
+.header-logo svg { height:30px; width:auto; filter: drop-shadow(0 0 8px rgba(255,102,0,0.3)); }
+.header-divider { width:1px; height:32px; background:linear-gradient(180deg, transparent, rgba(255,255,255,0.15), transparent); }
+
+.header-tool-name {
+  color: #FFFFFF;
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.92;
+}
+
+.header-right { display:flex; align-items:center; gap:12px; }
+.header-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(4px);
+}
+
+/* ══ HERO BAR ══ */
+.hero-bar {
+  background: linear-gradient(135deg, #0D0D0D 0%, #2A1A00 50%, #1A1A1A 100%);
+  padding: 28px 48px;
+  border-bottom: 1px solid rgba(255,102,0,0.2);
+  position: relative;
+  overflow: hidden;
+}
+.hero-bar::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,102,0,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -40px; left: 20%;
+  width: 300px; height: 100px;
+  background: radial-gradient(ellipse, rgba(255,102,0,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+}
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+.hero-title span { color: var(--eqt-orange); }
+.hero-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+.hero-meta-item { text-align: right; }
+.hero-meta-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 2px;
+}
+.hero-meta-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* ══ LAYOUT ══ */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 48px 60px;
+  display: grid;
+  gap: 16px;
+}
+
+/* ══ STEP CONNECTOR ══ */
+.step-connector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 12px;
+  margin: -4px 0;
+}
+.step-connector::after {
+  content: '';
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--border-md), transparent);
+}
+
+/* ══ CARD ══ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s;
+}
+.card:hover { box-shadow: var(--shadow-md); }
+
+.card-header {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+}
+
+.card-num {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--eqt-orange-lt), var(--eqt-orange-md));
+  color: var(--eqt-orange-dk);
+  font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  box-shadow: 0 1px 3px rgba(255,102,0,0.2);
+}
+.card-num.upload {
+  background: linear-gradient(135deg, var(--purple-lt), var(--purple-bd));
+  color: var(--purple);
+  box-shadow: 0 1px 3px rgba(124,58,237,0.2);
+}
+.card-num.result {
+  background: linear-gradient(135deg, var(--green-lt), var(--green-md));
+  color: var(--green-dk);
+  box-shadow: 0 1px 3px rgba(5,150,105,0.2);
+}
+
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.card-sub { font-size: 11px; color: var(--text-4); margin-left: auto; font-style: italic; }
+.card-body { padding: 22px; }
+
+/* ══ FORM ══ */
+.field-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:14px; }
+.field { display:flex; flex-direction:column; gap:6px; }
+.field-label { font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.02em; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.tag { font-size:9px; font-weight:700; padding:2px 7px; border-radius:8px; letter-spacing:0.04em; flex-shrink:0; }
+.tag-eur  { background:var(--tag-eur-bg); color:var(--tag-eur-tx); }
+.tag-usd  { background:var(--tag-usd-bg); color:var(--tag-usd-tx); }
+.tag-usr  { background:var(--tag-usr-bg); color:var(--tag-usr-tx); }
+.tag-auto { background:var(--tag-auto-bg); color:var(--tag-auto-tx); }
+.tag-ccy  { background:var(--tag-ccy-bg); color:var(--tag-ccy-tx); font-family:'DM Mono',monospace; font-size:10px; padding:2px 7px; border-radius:4px; font-weight:600; }
+
+.input {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--eqt-orange);
+  box-shadow: 0 0 0 3px rgba(255,102,0,0.1), inset 0 1px 2px rgba(0,0,0,0.03);
+  background: #FFFEF8;
+}
+.input::placeholder { color: var(--text-4); }
+.input.auto-filled { border-color: var(--purple); background: #FDFAFF; }
+input[type="date"].input { color-scheme: light; }
+
+.ccy-input {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+.ccy-input:focus { outline:none; border-color:var(--eqt-orange); box-shadow:0 0 0 3px rgba(255,102,0,0.1); }
+.ccy-input.auto-filled { border-color:var(--purple); background:#FDFAFF; }
+
+.field-note { font-size: 10px; color: var(--text-4); font-style: italic; line-height: 1.4; }
+.derived-val {
+  background: var(--bg);
+  border: 1.5px dashed var(--border-md);
+  border-radius: 8px;
+  padding: 10px 13px;
+  color: var(--text-3);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.sub-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 14px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 9px;
+}
+.sub-label::before {
+  content: '';
+  display: block;
+  width: 3px; height: 14px;
+  background: linear-gradient(180deg, var(--eqt-orange), var(--eqt-orange-dk));
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.ccy-pair-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: linear-gradient(135deg, var(--eqt-orange-lt), #FFF0E0);
+  border: 1px solid var(--eqt-orange-md);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  color: var(--eqt-orange-dk);
+}
+
+/* ══ UPLOAD ══ */
+.upload-zone {
+  border: 1.5px dashed var(--border-md);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  background: linear-gradient(135deg, var(--bg) 0%, #F8F9FB 100%);
+}
+.upload-zone:hover { border-color: var(--eqt-orange); background: linear-gradient(135deg, var(--eqt-orange-lt), #FFF8F0); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.upload-zone.dragover { border-color: var(--eqt-orange); background: var(--eqt-orange-lt); box-shadow: var(--shadow-orange); }
+.upload-zone.success { border-color: var(--green); border-style: solid; background: linear-gradient(135deg, var(--green-lt), #F0FDF8); }
+.upload-zone.error   { border-color: var(--red); border-style: solid; background: var(--red-lt); }
+.upload-zone.loading { opacity: 0.7; border-color: var(--amber); }
+.upload-icon { font-size: 22px; flex-shrink: 0; }
+.upload-text { flex: 1; min-width: 0; }
+.upload-title { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 3px; }
+.upload-hint { font-size: 10px; color: var(--text-3); }
+.upload-status { font-size: 10px; margin-top: 4px; font-weight: 600; }
+.upload-status.ok  { color: var(--green-dk); }
+.upload-status.err { color: var(--red); }
+.upload-status.loading { color: var(--amber); }
+.upload-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+.parsed-preview { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: none; background: var(--surface); box-shadow: var(--shadow-sm); }
+.parsed-preview.visible { display: block; }
+.parsed-preview-title { font-size: 10px; font-weight: 700; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--bg); display: flex; justify-content: space-between; align-items: center; }
+.parsed-rows { max-height: 200px; overflow-y: auto; }
+.parsed-row { display: flex; justify-content: space-between; padding: 6px 14px; font-size: 11px; border-bottom: 1px solid var(--border); gap: 12px; font-family: 'DM Mono', monospace; }
+.parsed-row:last-child { border-bottom: none; }
+.parsed-row-label { color: var(--text-3); flex: 1; }
+.parsed-row-val { text-align: right; white-space: nowrap; font-weight: 600; }
+.parsed-row-val.matched   { color: var(--green-dk); }
+.parsed-row-val.unmatched { color: var(--red); }
+
+/* ══ HEDGE BLOCKS ══ */
+.hedge-block { border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+.hedge-block:last-child { margin-bottom: 0; }
+.hedge-block-header { padding: 10px 18px; background: linear-gradient(135deg, var(--surface-2), var(--bg)); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.hedge-block-num { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(135deg, var(--eqt-orange), var(--eqt-orange-dk)); color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'DM Mono', monospace; box-shadow: 0 2px 4px rgba(255,102,0,0.3); }
+.hedge-bank-label { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.hedge-ccy-info { font-size: 11px; color: var(--text-3); display: flex; align-items: center; gap: 6px; margin-left: 4px; }
+.hedge-block-body { padding: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 14px; }
+.remove-btn { margin-left: auto; background: none; border: 1.5px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: 10px; font-weight: 600; color: var(--text-3); cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 4px; }
+.remove-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-lt); }
+
+.spot-row { border-top: 1px solid var(--border); padding-top: 18px; margin-top: 6px; }
+.spot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 14px; }
+
+/* ══ ADD BUTTON ══ */
+.add-btn {
+  width: 100%; padding: 11px;
+  border: 1.5px dashed var(--border-md);
+  border-radius: 8px;
+  background: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: all 0.2s;
+  margin-top: 12px;
+  letter-spacing: 0.02em;
+}
+.add-btn:hover { border-color: var(--eqt-orange); color: var(--eqt-orange); background: var(--eqt-orange-lt); transform: translateY(-1px); }
+
+/* ══ RESULTS ══ */
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; background: var(--border); }
+
+.result-card {
+  background: var(--surface);
+  padding: 28px 32px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.result-card:nth-child(1)::before { background: linear-gradient(90deg, var(--eqt-orange), var(--eqt-orange-dk)); }
+.result-card:nth-child(2)::before { background: linear-gradient(90deg, var(--green-dk), var(--green)); }
+.result-card.borrow-eur::before   { background: linear-gradient(90deg, var(--eqt-orange), var(--eqt-orange-dk)); }
+.result-card.borrow-usd::before   { background: linear-gradient(90deg, var(--green-dk), var(--green)); }
+
+.result-card.borrow-eur { background: linear-gradient(160deg, #FFFBF7 0%, var(--surface) 60%); }
+.result-card.borrow-usd { background: linear-gradient(160deg, #F0FDF8 0%, var(--surface) 60%); }
+
+.result-ccy { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-4); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.ccy-pip { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pip-sleeve1 { background: var(--eqt-orange); box-shadow: 0 0 4px rgba(255,102,0,0.4); }
+.pip-sleeve2 { background: var(--green); box-shadow: 0 0 4px rgba(5,150,105,0.4); }
+
+.result-label { font-size: 11px; color: var(--text-3); margin-bottom: 10px; font-weight: 500; }
+.result-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-family: 'DM Mono', monospace;
+}
+.result-value.sleeve1 { color: var(--eqt-orange); }
+.result-value.sleeve2 { color: var(--green-dk); }
+.result-pct { font-size: 11px; color: var(--text-4); margin-top: 7px; font-family: 'DM Mono', monospace; }
+
+/* Section labels inside result card */
+.res-section-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3);
+  margin: 0 0 12px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 22px 0;
+}
+.res-section-label span.bar {
+  width: 3px; height: 14px;
+  border-radius: 2px;
+  display: inline-block; flex-shrink: 0;
+}
+.bar-orange { background: linear-gradient(180deg, var(--eqt-orange), var(--eqt-orange-dk)); }
+.bar-green  { background: linear-gradient(180deg, var(--green-dk), var(--green)); }
+
+/* ══ GP STAKE ══ */
+.gp-panel {
+  border-top: 1px solid var(--border);
+  padding: 20px 32px;
+  background: linear-gradient(135deg, #FFFBF5 0%, var(--surface) 100%);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.gp-value-block { flex-shrink: 0; }
+.gp-label { font-size: 9px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-4); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.gp-label-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--eqt-orange); }
+.gp-value { font-size: 24px; font-weight: 700; font-family: 'DM Mono', monospace; letter-spacing: -0.02em; color: var(--eqt-orange-dk); }
+.gp-sub { font-size: 10px; color: var(--text-4); margin-top: 4px; font-family: 'DM Mono', monospace; max-width: 340px; line-height: 1.5; }
+.gp-divider { height: 52px; width: 1px; background: linear-gradient(180deg, transparent, var(--border-md), transparent); flex-shrink: 0; }
+
+/* ══ CALC BUTTON ══ */
+.calc-btn {
+  background: linear-gradient(135deg, var(--eqt-orange) 0%, var(--eqt-orange-dk) 100%);
+  color: #FFFFFF;
+  border: none;
+  padding: 14px 40px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 10px;
+  letter-spacing: 0.04em;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-orange), inset 0 1px 0 rgba(255,255,255,0.15);
+  text-transform: uppercase;
+}
+.calc-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255,102,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.calc-btn:active { transform: translateY(0); }
+
+/* ══ DISCLOSURE ══ */
+.disc-toggle {
+  font-size: 11px; color: var(--text-3); cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  background: none; border-left: none; border-right: none; border-bottom: none;
+  width: 100%; text-align: left; letter-spacing: 0.04em;
+  font-family: 'Inter', sans-serif; font-weight: 500;
+  transition: color 0.15s, background 0.15s;
+}
+.disc-toggle:hover { color: var(--eqt-orange); background: var(--eqt-orange-lt); }
+.disc-icon { transition: transform 0.2s; font-size: 10px; color: var(--eqt-orange); }
+.disc-toggle.open .disc-icon { transform: rotate(90deg); }
+.disc-content { display: none; padding: 0 22px 22px; }
+.disc-content.open { display: block; }
+
+/* ══ TABLES ══ */
+.calc-tbl { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'DM Mono', monospace; }
+.calc-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.calc-tbl td:first-child { color: var(--text-3); width: 60%; }
+.calc-tbl td:last-child { text-align: right; color: var(--text-2); font-weight: 500; }
+.calc-tbl tr:last-child td { border-bottom: none; }
+.calc-tbl .subtotal td { color: var(--eqt-orange-dk); font-weight: 700; background: var(--eqt-orange-lt); }
+.tbl-title { font-size: 10px; font-weight: 700; color: var(--text-3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px; margin-top: 16px; }
+.tbl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ══ INFO BOX ══ */
+.info-box { background: linear-gradient(135deg, #FFF7ED, var(--eqt-orange-lt)); border: 1px solid var(--eqt-orange-md); border-radius: 8px; padding: 11px 14px; font-size: 11px; color: #92400E; display: flex; align-items: flex-start; gap: 9px; margin-bottom: 18px; }
+.info-box svg { flex-shrink: 0; margin-top: 1px; }
+
+/* ══ MISC ══ */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--eqt-orange); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle; margin-right: 4px; }
+
+.flex-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.sep { height: 1px; background: var(--border); margin: 16px 0; }
+#hedge_upload_list { display: flex; flex-direction: column; gap: 8px; }
+
+/* Amounts to Borrow divider */
+.borrow-divider {
+  border-top: 2px solid var(--eqt-orange-md);
+  background: linear-gradient(180deg, var(--eqt-orange-lt) 0%, var(--surface) 100%);
+}
+
+@media(max-width:860px) {
+  .main { padding: 20px 16px; }
+  .header, .hero-bar { padding: 0 20px; }
+  .hero-bar { padding: 20px; }
+  .header-tool-name { display: none; }
+  .tbl-grid, .result-grid { grid-template-columns: 1fr; }
+  .hedge-block-body { grid-template-columns: 1fr 1fr; }
+  .spot-grid { grid-template-columns: 1fr; }
+  .gp-panel { padding: 16px 20px; }
+  .gp-divider { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="EQT">
+      <rect x="0" y="4" width="6" height="32" fill="#FF6600"/>
+      <rect x="0" y="4" width="22" height="6" fill="#FF6600"/>
+      <rect x="0" y="17" width="18" height="6" fill="#FF6600"/>
+      <rect x="0" y="30" width="22" height="6" fill="#FF6600"/>
+      <path d="M34 20C34 11.163 41.163 4 50 4C58.837 4 66 11.163 66 20C66 25.84 62.82 30.938 58.078 33.672L62 38H54L51.5 35.1C51 35.167 50.503 35.2 50 35.2C41.163 35.2 34 28.037 34 20Z" fill="white"/>
+      <path d="M40 20C40 14.477 44.477 10 50 10C55.523 10 60 14.477 60 20C60 23.18 58.48 26.008 56.126 27.844L59 31H53.5L52.2 29.55C51.48 29.832 50.706 29.986 49.9 29.986C44.477 29.986 40 25.523 40 20Z" fill="#FF6600"/>
+      <circle cx="50" cy="20" r="5.5" fill="white"/>
+      <rect x="72" y="4" width="32" height="6" fill="#FF6600"/>
+      <rect x="84" y="10" width="8" height="26" fill="#FF6600"/>
+    </svg>
+    <div class="header-divider"></div>
+    <div class="header-tool-name">ECL and Bridge Drawdown Amounts Calculator</div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">Confidential</div>
+  </div>
+</div>
+
+<!-- HERO BAR -->
+<div class="hero-bar">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-title"><span>ECL &amp; Bridge</span> Drawdown<br>Amounts Calculator</div>
+      <div class="hero-sub">Dual Currency Mechanics · Deal Contingent FX</div>
+    </div>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">Powered by</div>
+        <div class="hero-meta-val">ECB Rates</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- UPLOAD COMMITMENT REPORT -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-num upload">↑</div>
+    <div class="card-title">Upload Commitment Report</div>
+    <div class="card-sub">Auto-populates Fund Remaining Commitments — values remain editable</div>
+  </div>
+  <div class="card-body">
+    <div class="upload-zone" id="zone_commitment"
+         ondragover="handleDrag(event,'zone_commitment')"
+         ondragleave="handleDragLeave('zone_commitment')"
+         ondrop="handleDrop(event,'commitment')">
+      <input type="file" class="upload-input" accept=".xlsx,.xls" onchange="handleFileSelect(event,'commitment')">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">
+        <div class="upload-title">Drop commitment report here, or click to browse</div>
+        <div class="upload-hint">.xlsx — reads EUR &amp; USD feeder sheets and EUR Upper &amp; lower side table (col M)</div>
+        <div class="upload-status" id="status_commitment"></div>
+      </div>
+    </div>
+    <div class="parsed-preview" id="preview_commitment">
+      <div class="parsed-preview-title">
+        <span>Extracted values</span>
+        <span id="commitment_file_label" style="font-weight:400;font-style:italic;font-size:9px;"></span>
+      </div>
+      <div class="parsed-rows" id="parsed_commitment_rows"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 1: SLEEVE SPLIT RATE ══ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-num">1</div>
+    <div class="card-title">Sleeve Split Rate</div>
+    <div class="card-sub">ECB Reference Rate — must be backdated 15 business days prior to utilisation</div>
+  </div>
+  <div class="card-body">
+    <div style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+      <div class="field" style="flex-shrink:0;">
+        <label class="field-label">Rate Pair</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input class="ccy-input input" id="fx_base_ccy" type="text" maxlength="4" placeholder="USD" value="USD"
+                 oninput="this.value=this.value.toUpperCase(); updateFxLabel();" style="width:80px;" title="Non-EUR sleeve CCY">
+          <span style="font-size:14px;color:var(--text-3);font-weight:500;">per</span>
+          <input class="ccy-input input" id="fx_quote_ccy" type="text" maxlength="4" placeholder="EUR" value="EUR"
+                 oninput="this.value=this.value.toUpperCase(); updateFxLabel();" style="width:80px;" title="EUR / base CCY">
+        </div>
+        <div class="field-note">Non-EUR CCY per EUR sleeve CCY</div>
+      </div>
+      <div class="field" style="flex-shrink:0;">
+        <label class="field-label" style="visibility:hidden;">Action</label>
+        <button id="fetch_rate_btn" onclick="fetchLiveRate()" style="display:flex;align-items:center;gap:8px;background:var(--eqt-dark);color:#fff;border:none;padding:9px 18px;border-radius:5px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background 0.15s;letter-spacing:0.02em;">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M10 2v4M10 14v4M2 10h4M14 10h4M4.93 4.93l2.83 2.83M12.24 12.24l2.83 2.83M4.93 15.07l2.83-2.83M12.24 7.76l2.83-2.83" stroke="#FF6600" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Fetch ECB Rate
+        </button>
+      </div>
+      <div class="field" style="flex:1; min-width:200px;">
+        <label class="field-label">
+          Rate <span id="fx_rate_label" class="ccy-pair-badge" style="margin-left:4px;">USD / EUR</span>
+          <span id="fx_rate_source_badge" style="display:none;font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;margin-left:6px;background:var(--green-lt);color:var(--green);border:1px solid var(--green-bd);"></span>
+        </label>
+        <input class="input" id="fx_split" type="number" step="0.00001" placeholder="0.00000" oninput="updateSpotDisplay()">
+        <div class="field-note" id="fx_rate_note">Override if needed — must be backdated 15 business days (ECB rate)</div>
+      </div>
+    </div>
+    <div id="fx_live_status" style="display:none;padding:10px 14px;border-radius:5px;font-size:11px;align-items:flex-start;gap:8px;"></div>
+    <div id="fx_historical_row" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+        <div class="field" style="flex-shrink:0;">
+          <label class="field-label"><span class="tag tag-usr">USER</span> Backdate to specific date</label>
+          <input class="input" id="fx_historical_date" type="date" style="width:180px;">
+          <div class="field-note">Enter the date 15 business days before utilisation</div>
+        </div>
+        <div class="field" style="flex-shrink:0;">
+          <label class="field-label" style="visibility:hidden;">Action</label>
+          <button onclick="fetchHistoricalRate()" style="display:flex;align-items:center;gap:6px;background:none;color:var(--eqt-orange);border:1px solid var(--eqt-orange-md);padding:9px 16px;border-radius:5px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s;">Fetch Rate for Date</button>
+        </div>
+        <div class="field" style="flex:1;min-width:160px;">
+          <label class="field-label">Historical Rate</label>
+          <div class="derived-val" id="fx_historical_result">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 2: FUND REMAINING COMMITMENTS ══ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-num">2</div>
+    <div class="card-title">Remaining Commitments</div>
+    <div class="card-sub">Auto-populated from commitment report — override if needed</div>
+    <span id="fund_name_badge" style="display:none; margin-left:8px; font-size:10px; font-weight:700; padding:2px 9px; border-radius:10px; background:var(--eqt-orange-lt); color:var(--eqt-orange); border:1px solid var(--eqt-orange-md); font-family:'DM Mono',monospace; letter-spacing:0.04em;"></span>
+  </div>
+  <div class="card-body">
+    <div class="sub-label" style="margin-bottom:14px;">EUR Sleeve entities</div>
+    <div class="field-grid" style="margin-bottom:20px;">
+      <div class="field">
+        <label class="field-label"><span class="tag tag-eur">EUR</span> <span class="fn">Fund</span> – EUR</label>
+        <input class="input" id="c_eur_main" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="tag tag-eur">EUR</span> <span class="fn">Fund</span> Employee SCSp</label>
+        <input class="input" id="c_eur_employee" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="tag tag-eur">EUR</span> <span class="fn">Fund</span> Leveraged Employee Co-Invest I SCSp</label>
+        <input class="input" id="c_eur_lev_employee" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="tag tag-eur">EUR</span> <span class="fn">Fund</span> Holding SCSp – EUR</label>
+        <input class="input" id="c_eur_holding" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="tag tag-eur">EUR</span> <span class="fn">Fund</span> General Partner</label>
+        <input class="input" id="c_eur_gp" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+    </div>
+    <div class="sub-label" style="margin-bottom:14px;">USD Sleeve entities</div>
+    <div class="field-grid">
+      <div class="field">
+        <label class="field-label"><span class="tag tag-usd">USD</span> <span class="fn">Fund</span> – USD</label>
+        <input class="input" id="c_usd_main" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="tag tag-usd">USD</span> <span class="fn">Fund</span> Holding SCSp – USD</label>
+        <input class="input" id="c_usd_holding" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 3: EQUITY TICKET ══ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-num">3</div>
+    <div class="card-title">Total Equity Ticket</div>
+    <div class="card-sub">GP Input</div>
+  </div>
+  <div class="card-body">
+    <div class="info-box">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#CC5200" stroke-width="1.5"/><path d="M10 9v5M10 6.5v.5" stroke="#CC5200" stroke-width="1.8" stroke-linecap="round"/></svg>
+      The equity ticket is denominated in the <strong style="margin:0 2px;">deal currency</strong> — the Quote CCY of the FX hedges. Enter the correct currency code below.
+    </div>
+    <div class="field-grid" style="max-width:480px;">
+      <div class="field">
+        <label class="field-label"><span class="tag tag-usr">USER</span> Currency</label>
+        <input class="ccy-input input" id="ticket_ccy" type="text" maxlength="4" placeholder="USD" value="USD" oninput="this.value=this.value.toUpperCase(); onTicketCcyChange();" style="width:100px;">
+        <div class="field-note">3-letter ISO code — auto-detected from hedge contracts</div>
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="tag tag-usr">USER</span> Total Equity Ticket <span id="ticket_ccy_tag" class="tag-ccy" style="background:var(--tag-ccy-bg);color:var(--tag-ccy-tx);font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;">USD</span></label>
+        <input class="input" id="equity_ticket" type="text" inputmode="decimal" placeholder="0.00" autocomplete="off" oninput="updateSpotDisplay()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 5: UPLOAD HEDGE CONTRACTS ══ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-num upload">↑</div>
+    <div class="card-title">Upload Hedge Contracts</div>
+    <div class="card-sub">Extracts CCY pair, notional &amp; Annex A rate schedule from each PDF</div>
+  </div>
+  <div class="card-body">
+    <div class="field" style="max-width:240px; margin-bottom:16px;">
+      <label class="field-label"><span class="tag tag-usr">USER</span> Settlement Date</label>
+      <input class="input" id="settlement_date" type="date">
+      <div class="field-note">Used to auto-populate forward rates from Annex A</div>
+    </div>
+    <div id="hedge_upload_list"></div>
+    <button class="add-btn" onclick="addHedgeUploadSlot()" style="margin-top:8px;">
+      <span>+</span> Add another contract
+    </button>
+    <div class="parsed-preview" id="preview_hedges">
+      <div class="parsed-preview-title"><span>Extracted values</span></div>
+      <div class="parsed-rows" id="parsed_hedge_rows"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECTION 4: HEDGING CONTRACTS ══ -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-num">4</div>
+    <div class="card-title">Hedging Contracts</div>
+    <div class="card-sub">Deal Contingent FX Forwards — auto-populated from uploaded PDFs</div>
+  </div>
+  <div class="card-body">
+    <div id="hedge_blocks_container"></div>
+    <div class="spot-row">
+      <div class="sub-label" style="margin-bottom:14px;">
+        Spot Top-Up
+        <span id="spot_pair_badge" class="ccy-pair-badge" style="margin-left:8px;">— / —</span>
+      </div>
+      <div class="spot-grid">
+        <div class="field">
+          <label class="field-label">Deal CCY Amount (derived)</label>
+          <div class="derived-val" id="spot_deal_display">—</div>
+          <div class="field-note" id="spot_deal_note">= EUR sleeve allocation − Σ hedged deal CCY</div>
+        </div>
+        <div class="field">
+          <label class="field-label"><span class="tag tag-usr">USER</span> Spot Rate (<span id="spot_rate_pair_label">Deal CCY per EUR</span>)</label>
+          <input class="input" id="spot_rate" type="number" step="0.0001" placeholder="0.0000">
+          <div class="field-note">ECB reference rate on utilisation date</div>
+        </div>
+        <div class="field">
+          <label class="field-label">EUR Equivalent</label>
+          <div class="derived-val" id="spot_eur_display">—</div>
+        </div>
+      </div>
+    </div>
+    <button class="add-btn" onclick="addHedgeBlock()" style="margin-top:16px;">
+      <span>+</span> Add hedge contract
+    </button>
+  </div>
+</div>
+
+<!-- Calculate -->
+<div class="flex-row">
+  <div class="spacer"></div>
+  <button class="calc-btn" onclick="calculate()">Calculate Drawdown</button>
+</div>
+
+<!-- ══ RESULTS ══ -->
+<div class="card" id="results_section" style="display:none;">
+  <div class="card-header">
+    <div class="card-num result">✓</div>
+    <div class="card-title">Results</div>
+  </div>
+
+  <!-- ECL Amounts -->
+  <div class="borrow-divider" style="border-top:none;">
+    <div class="res-section-label">
+      <span class="bar bar-orange"></span>
+      ECL Amounts
+    </div>
+  </div>
+  <div class="result-grid" style="margin:0 0 0 0;">
+    <div class="result-card">
+      <div class="result-ccy"><span class="ccy-pip pip-sleeve1"></span> <span id="res_sleeve1_label">EUR Sleeve</span></div>
+      <div class="result-label">ECL Amount</div>
+      <div class="result-value sleeve1" id="out_sleeve1">—</div>
+      <div class="result-pct" id="out_sleeve1_sub"></div>
+    </div>
+    <div class="result-card">
+      <div class="result-ccy"><span class="ccy-pip pip-sleeve2"></span> <span id="res_sleeve2_label">USD Sleeve</span></div>
+      <div class="result-label">ECL Amount</div>
+      <div class="result-value sleeve2" id="out_sleeve2">—</div>
+      <div class="result-pct" id="out_sleeve2_sub"></div>
+    </div>
+  </div>
+
+  <!-- GP Stake -->
+  <div class="gp-panel">
+    <div class="gp-value-block">
+      <div class="gp-label"><span class="gp-label-pip"></span> GP Stake — EUR Sleeve</div>
+      <div class="gp-value" id="out_gp">—</div>
+      <div class="gp-sub" id="out_gp_sub"></div>
+    </div>
+    <div class="gp-divider"></div>
+    <table class="calc-tbl" id="tbl_gp" style="flex:1;min-width:260px;max-width:480px;"></table>
+  </div>
+
+  <!-- Amounts to Borrow -->
+  <div class="borrow-divider">
+    <div class="res-section-label">
+      <span class="bar bar-orange"></span>
+      Amounts to Borrow
+    </div>
+  </div>
+  <div class="result-grid" style="border-top:none;">
+    <div class="result-card borrow-eur">
+      <div class="result-ccy"><span class="ccy-pip pip-sleeve1"></span> <span id="borrow_sleeve1_label">EUR Sleeve</span></div>
+      <div class="result-label">Amount to Borrow (ECL EUR − GP Stake)</div>
+      <div class="result-value sleeve1" id="out_borrow_eur">—</div>
+      <div class="result-pct" id="out_borrow_eur_sub"></div>
+    </div>
+    <div class="result-card borrow-usd">
+      <div class="result-ccy"><span class="ccy-pip pip-sleeve2"></span> <span id="borrow_sleeve2_label">USD Sleeve</span></div>
+      <div class="result-label">Amount to Borrow (= ECL USD Amount)</div>
+      <div class="result-value sleeve2" id="out_borrow_usd">—</div>
+      <div class="result-pct" id="out_borrow_usd_sub"></div>
+    </div>
+  </div>
+
+  <button class="disc-toggle" id="toggle_btn" onclick="toggleDetails()">
+    <span class="disc-icon">▶</span> Show intermediate calculations
+  </button>
+  <div class="disc-content" id="details_content">
+    <div class="tbl-grid">
+      <div>
+        <div class="tbl-title">Sleeve Split</div>
+        <table class="calc-tbl" id="tbl_sleeve"></table>
+      </div>
+      <div>
+        <div class="tbl-title">EUR Sleeve — Hedge Breakdown</div>
+        <table class="calc-tbl" id="tbl_hedge"></table>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="tbl-title">Full Calculation Detail</div>
+    <table class="calc-tbl" id="tbl_full"></table>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ════════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════════
+const liveAnnex = {};       // { slot_N: { "YYYY-MM-DD": rate } }
+const hedgeMeta = {};       // { hedgeId: { baseCcy, quoteCcy } }
+let hedgeCount = 0;
+let uploadSlotCount = 0;
+let detectedFundName = ''; // set by parseCommitmentReport
+
+// ════════════════════════════════════════════════════════════════════
+// EQT X FINAL CLOSE — GP COMMITMENT DATA
+// Source: EQT_X_Final_Close_Commitments.xlsx
+// GP Commitment / Total EUR Sleeve Commitment = fixed GP%
+// ════════════════════════════════════════════════════════════════════
+const EQT_X_FINAL_CLOSE = {
+  fundNames: ['eqt x'],   // lower-cased fund names this applies to
+  gpCommitment:         20_000_000,           // EQT X GENERAL PARTNER SARL
+  totalEurSleeve:       17_377_812_719.64,    // TOTAL EUR Sleeve
+  gpPct:                20_000_000 / 17_377_812_719.64,  // ≈ 0.11509%
+  // Full EUR sleeve breakdown for reference
+  entities: [
+    { name: 'EQT X (No.1) EUR SCSp',                    commitment: 14_729_076_114,    pct: 0.8475794020586688  },
+    { name: 'EQT X (No.2) EUR SCSp',                    commitment:  1_845_907_000,    pct: 0.10622205623805572 },
+    { name: 'EQT X (No.3) EUR SCSp',                    commitment:    274_247_000,    pct: 0.015781445250014257},
+    { name: 'EQT X GENERAL PARTNER SARL',                commitment:     20_000_000,   pct: 0.001150892826540619},
+    { name: 'EQT X LEVERAGED EMPLOYEE CO INVEST I SCSP', commitment:     71_750_000,   pct: 0.0041288280152144705},
+    { name: 'EQT X EMPLOYEE SCSP',                       commitment:    273_967_193,   pct: 0.015765343856558464},
+    { name: 'EQT X HOLDING SCSP',                        commitment:    162_865_412.64,pct: 0.009372031754947692 },
+  ]
+};
+
+// ════════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  addHedgeBlock(null, null, 'USD', 'EUR');
+  addHedgeBlock(null, null, 'USD', 'EUR');
+  addHedgeUploadSlot();
+  addHedgeUploadSlot();
+  updateFxLabel();
+  updateSpotDisplay();
+  autoPopulateRates();
+  initAmtFields();
+  // Fetch live rate on load
+  fetchLiveRate();
+});
+
+// ════════════════════════════════════════════════════════════════════
+// HEDGE BLOCKS
+// Each hedge has: notional in Quote CCY (deal CCY paid by fund),
+// forward rate expressed as Quote CCY per Base CCY (EUR or fund EUR CCY).
+// Base = what fund receives (EUR sleeve CCY)
+// Quote = what fund pays (deal CCY, e.g. USD)
+// Rate format: "Quote per Base 1.00" → EUR amount = QuoteAmt / Rate
+// ════════════════════════════════════════════════════════════════════
+function addHedgeBlock(defaultNotional, defaultRate, defaultQuote, defaultBase) {
+  hedgeCount++;
+  const id = hedgeCount;
+  const qCcy = (defaultQuote || 'USD').toUpperCase();
+  const bCcy = (defaultBase  || 'EUR').toUpperCase();
+  hedgeMeta[id] = { baseCcy: bCcy, quoteCcy: qCcy };
+
+  const container = document.getElementById('hedge_blocks_container');
+  const div = document.createElement('div');
+  div.className = 'hedge-block';
+  div.id = 'hedge_block_' + id;
+  div.innerHTML = `
+    <div class="hedge-block-header">
+      <div class="hedge-block-num">${id}</div>
+      <div class="hedge-bank-label">Bank ${id}</div>
+      <div class="hedge-ccy-info">
+        <span class="ccy-pair-badge" id="hedge_pair_badge_${id}">${qCcy} / ${bCcy}</span>
+      </div>
+      ${id > 1 ? `<button class="remove-btn" onclick="removeHedgeBlock(${id})">✕ Remove</button>` : ''}
+    </div>
+    <div class="hedge-block-body">
+      <div class="field">
+        <label class="field-label">Base CCY <span style="font-size:9px;color:var(--text-4)">(fund receives)</span></label>
+        <input class="ccy-input input" id="hedge_base_ccy_${id}" type="text" maxlength="4" value="${bCcy}"
+               oninput="this.value=this.value.toUpperCase(); updateHedgeMeta(${id});" style="width:100%;">
+      </div>
+      <div class="field">
+        <label class="field-label">Quote CCY <span style="font-size:9px;color:var(--text-4)">(fund pays / deal CCY)</span></label>
+        <input class="ccy-input input" id="hedge_quote_ccy_${id}" type="text" maxlength="4" value="${qCcy}"
+               oninput="this.value=this.value.toUpperCase(); updateHedgeMeta(${id});" style="width:100%;">
+      </div>
+      <div class="field">
+        <label class="field-label">Notional <span class="tag-ccy" id="hedge_notional_tag_${id}" style="background:var(--tag-ccy-bg);color:var(--tag-ccy-tx);font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;margin-left:2px;">${qCcy}</span></label>
+        <input class="input amt-field" id="hedge_notional_${id}" type="text" inputmode="decimal" value="${defaultNotional ? fmtAmtDisplay(defaultNotional) : ''}" placeholder="0.00" autocomplete="off"
+               oninput="updateSpotDisplay()">
+        <div class="field-note">Amount payable by Bank (Quote CCY)</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Forward Rate <span class="tag-ccy" id="hedge_rate_tag_${id}" style="background:var(--tag-ccy-bg);color:var(--tag-ccy-tx);font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;margin-left:2px;">${qCcy} per ${bCcy} 1.00</span></label>
+        <input class="input" id="hedge_rate_${id}" type="number" step="0.00001" value="${defaultRate||''}"
+               placeholder="Auto-populated from settlement date">
+        <div class="field-note">Populated from Annex A — override if needed</div>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  updateSpotDisplay();
+}
+
+function updateHedgeMeta(id) {
+  const bCcy = (document.getElementById('hedge_base_ccy_'+id)?.value||'EUR').toUpperCase();
+  const qCcy = (document.getElementById('hedge_quote_ccy_'+id)?.value||'USD').toUpperCase();
+  hedgeMeta[id] = { baseCcy: bCcy, quoteCcy: qCcy };
+  const badge = document.getElementById('hedge_pair_badge_'+id);
+  if (badge) badge.textContent = qCcy + ' / ' + bCcy;
+  const nTag = document.getElementById('hedge_notional_tag_'+id);
+  if (nTag) nTag.textContent = qCcy;
+  const rTag = document.getElementById('hedge_rate_tag_'+id);
+  if (rTag) rTag.textContent = qCcy + ' per ' + bCcy + ' 1.00';
+  syncTicketCcyFromHedges();
+  updateSpotPairBadge();
+  updateSpotDisplay();
+}
+
+function removeHedgeBlock(id) {
+  document.getElementById('hedge_block_'+id)?.remove();
+  delete hedgeMeta[id];
+  relabelHedgeBlocks();
+  updateSpotDisplay();
+}
+
+function relabelHedgeBlocks() {
+  document.querySelectorAll('#hedge_blocks_container .hedge-block').forEach((block, i) => {
+    block.querySelector('.hedge-bank-label').textContent = 'Bank ' + (i+1);
+    block.querySelector('.hedge-block-num').textContent  = (i+1);
+  });
+}
+
+function getHedgeIds() {
+  return Array.from(document.querySelectorAll('#hedge_blocks_container .hedge-block'))
+    .map(b => parseInt(b.id.replace('hedge_block_','')));
+}
+
+// Infer ticket CCY from first hedge's Quote CCY
+function syncTicketCcyFromHedges() {
+  const ids = getHedgeIds();
+  if (!ids.length) return;
+  const firstMeta = hedgeMeta[ids[0]];
+  if (!firstMeta) return;
+  const qCcy = firstMeta.quoteCcy; // deal CCY
+  const bCcy = firstMeta.baseCcy;  // EUR CCY
+
+  // Sync ticket CCY
+  const el = document.getElementById('ticket_ccy');
+  if (el && el.value !== qCcy) {
+    el.value = qCcy;
+    el.classList.add('auto-filled');
+    setTimeout(() => el.classList.remove('auto-filled'), 2000);
+  }
+
+  // Sync sleeve split CCY pair
+  const fxBase  = document.getElementById('fx_base_ccy');
+  const fxQuote = document.getElementById('fx_quote_ccy');
+  const pairChanged = (fxBase?.value !== qCcy) || (fxQuote?.value !== bCcy);
+  if (fxBase)  { fxBase.value  = qCcy; if (pairChanged) flashField('fx_base_ccy');  }
+  if (fxQuote) { fxQuote.value = bCcy; if (pairChanged) flashField('fx_quote_ccy'); }
+
+  updateFxLabel();
+  onTicketCcyChange();
+  if (pairChanged) scheduleFxFetch();
+}
+
+function onTicketCcyChange() {
+  const ccy = (document.getElementById('ticket_ccy')?.value||'USD').toUpperCase();
+  const tag = document.getElementById('ticket_ccy_tag');
+  if (tag) tag.textContent = ccy;
+  updateSpotPairBadge();
+  updateSpotDisplay();
+}
+
+function updateSpotPairBadge() {
+  const ticketCcy = (document.getElementById('ticket_ccy')?.value||'USD').toUpperCase();
+  // EUR sleeve base CCY — infer from first hedge's base CCY
+  const ids = getHedgeIds();
+  const baseCcy = ids.length && hedgeMeta[ids[0]] ? hedgeMeta[ids[0]].baseCcy : 'EUR';
+  const badge = document.getElementById('spot_pair_badge');
+  if (badge) badge.textContent = ticketCcy + ' / ' + baseCcy;
+  const lbl = document.getElementById('spot_rate_pair_label');
+  if (lbl) lbl.textContent = ticketCcy + ' per ' + baseCcy;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// UPLOAD SLOTS
+// ════════════════════════════════════════════════════════════════════
+function addHedgeUploadSlot() {
+  uploadSlotCount++;
+  const slotId = uploadSlotCount;
+  const list = document.getElementById('hedge_upload_list');
+  const div = document.createElement('div');
+  div.id = 'upload_slot_' + slotId;
+  div.style.cssText = 'display:flex;align-items:center;gap:8px;';
+  div.innerHTML = `
+    <div class="upload-zone" id="zone_bank_${slotId}" style="flex:1;"
+         ondragover="handleDrag(event,'zone_bank_${slotId}')"
+         ondragleave="handleDragLeave('zone_bank_${slotId}')"
+         ondrop="handleDrop(event,'bank_${slotId}')">
+      <input type="file" class="upload-input" accept=".pdf" onchange="handleFileSelect(event,'bank_${slotId}')">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">
+        <div class="upload-title">Bank ${slotId} — DCFX Confirmation</div>
+        <div class="upload-hint">Extracts CCY pair, notional &amp; Annex A rate schedule</div>
+        <div class="upload-status" id="status_bank_${slotId}"></div>
+      </div>
+    </div>
+    ${slotId > 1 ? `<button style="background:none;border:1px solid var(--border-md);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;color:var(--text-3);flex-shrink:0;transition:all 0.15s;"
+      onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+      onmouseout="this.style.borderColor='var(--border-md)';this.style.color='var(--text-3)'"
+      onclick="removeUploadSlot(${slotId})">✕</button>` : ''}
+  `;
+  list.appendChild(div);
+}
+
+function removeUploadSlot(slotId) {
+  document.getElementById('upload_slot_'+slotId)?.remove();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// DRAG & DROP
+// ════════════════════════════════════════════════════════════════════
+function handleDrag(e, zoneId) { e.preventDefault(); document.getElementById(zoneId)?.classList.add('dragover'); }
+function handleDragLeave(zoneId) { document.getElementById(zoneId)?.classList.remove('dragover'); }
+function handleDrop(e, type) { e.preventDefault(); document.getElementById('zone_'+type)?.classList.remove('dragover'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0], type); }
+function handleFileSelect(e, type) { if (e.target.files[0]) processFile(e.target.files[0], type); }
+function processFile(file, type) { type === 'commitment' ? parseCommitmentReport(file) : parseHedgePDF(file, type); }
+
+function setZoneState(zoneId, state, msg) {
+  const zone = document.getElementById('zone_'+zoneId);
+  const statusEl = document.getElementById('status_'+zoneId);
+  if (!zone || !statusEl) return;
+  zone.classList.remove('success','error','loading');
+  statusEl.className = 'upload-status';
+  if (state === 'loading') { zone.classList.add('loading'); statusEl.classList.add('loading'); statusEl.innerHTML = '<span class="spinner"></span>'+msg; }
+  else if (state === 'success') { zone.classList.add('success'); statusEl.classList.add('ok'); statusEl.textContent = '✓ '+msg; }
+  else { zone.classList.add('error'); statusEl.classList.add('err'); statusEl.textContent = '✗ '+msg; }
+}
+
+function flashField(id) { const el = document.getElementById(id); if (!el) return; el.classList.add('auto-filled'); setTimeout(() => el.classList.remove('auto-filled'), 2500); }
+
+// ── Fund name: update all .fn spans and the badge ──────────────────
+function updateFundName(name) {
+  if (!name) return;
+  detectedFundName = name;
+  // Update all <span class="fn"> labels in the commitments card
+  document.querySelectorAll('span.fn').forEach(el => { el.textContent = name; });
+  // Update the card header badge
+  const badge = document.getElementById('fund_name_badge');
+  if (badge) { badge.textContent = name; badge.style.display = 'inline-flex'; }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// COMMITMENT REPORT PARSER
+//
+// Three entities are sourced from a dedicated side table in the
+// "EUR Upper & lower" sheet (col J = entity name, col M = Unfunded):
+//   • EQT X Holding SCSp          → c_eur_holding
+//   • EQT X Employee SCSp         → c_eur_employee
+//   • EQT X Leveraged Employee Co-Invest I SCSp → c_eur_lev_employee
+//
+// All other fields use standard subtotal rows from their own sheets.
+// ════════════════════════════════════════════════════════════════════
+function parseCommitmentReport(file) {
+  setZoneState('commitment','loading','Reading workbook…');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const extracted = {};
+
+      // ── Helper: numeric value or null ───────────────────────────
+      function num(v) {
+        const n = parseFloat(String(v==null?'':v).replace(/,/g,''));
+        return isNaN(n) ? null : n;
+      }
+
+      // ── PASS 1: Side table in "EUR Upper & lower" sheet ─────────
+      // Columns (0-indexed): J=9, K=10, L=11, M=12
+      // Header row: J="Commitments / entity name", M="Unfunded Investor Commitment"
+      // Data rows: J=entity name, M=unfunded value
+      const colJ = 9;  // entity name
+      const colM = 12; // Unfunded Investor Commitment
+
+      // Entity search keys → field ids
+      const sideTableTargets = [
+        { key: 'holding scsp',                         id: 'c_eur_holding'       },
+        { key: 'employee scsp',                        id: 'c_eur_employee'      },
+        { key: 'leveraged employee co invest i scsp',  id: 'c_eur_lev_employee'  },
+        { key: 'leveraged employee co-invest i scsp',  id: 'c_eur_lev_employee'  },
+      ];
+
+      wb.SheetNames.forEach(sheetName => {
+        const sn = sheetName.toLowerCase();
+        // Target: sheet whose name includes both "upper" and "lower" (EUR variant)
+        if (!(sn.includes('upper') && sn.includes('lower') && sn.includes('eur'))) return;
+
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+        rows.forEach(row => {
+          const jVal = String(row[colJ] == null ? '' : row[colJ]).toLowerCase().trim();
+          const mVal = num(row[colM]);
+          if (!jVal || mVal === null || mVal <= 0) return;
+
+          sideTableTargets.forEach(t => {
+            // Normalise: collapse whitespace & remove hyphens for fuzzy match
+            const normKey  = t.key.replace(/[-\s]+/g,' ');
+            const normJVal = jVal.replace(/[-\s]+/g,' ');
+            if (!extracted[t.id] && normJVal.includes(normKey)) {
+              extracted[t.id] = mVal;
+            }
+          });
+        });
+      });
+
+      // ── PASS 2: Standard subtotal rows (EUR / USD feeder sheets) ──
+      const subtotalTargets = [
+        { key: 'subtotal: eqt x - eur',  id: 'c_eur_main'  },
+        { key: 'subtotal: eqt x - usd',  id: 'c_usd_main'  },
+      ];
+      let gpDone = false, usdHoldingDone = false;
+
+      wb.SheetNames.forEach(sheetName => {
+        const sn = sheetName.toLowerCase();
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+        // Detect "Unfunded Investor Commitment" column
+        let unfCol = -1;
+        rows.forEach(row => {
+          if (unfCol >= 0) return;
+          row.forEach((c, ci) => {
+            if (String(c).toLowerCase().includes('unfunded') &&
+                String(c).toLowerCase().includes('commitment')) unfCol = ci;
+          });
+        });
+
+        rows.forEach(row => {
+          const cells   = row.map(c => String(c).toLowerCase().trim());
+          const rowText = cells.join(' ');
+
+          function bestUnfunded() {
+            if (unfCol >= 0) { const v = num(row[unfCol]); if (v !== null && Math.abs(v) > 100) return v; }
+            // Fallback: last large positive number in row
+            for (let i = row.length - 1; i >= 0; i--) {
+              const v = num(row[i]);
+              if (v !== null && v > 1000) return v;
+            }
+            return null;
+          }
+
+          // Subtotal rows
+          subtotalTargets.forEach(t => {
+            if (!extracted[t.id] && cells[0].includes(t.key)) {
+              const v = bestUnfunded();
+              if (v !== null) extracted[t.id] = v;
+            }
+          });
+
+          // General Partner SARL (EUR sheet, column-based unfunded)
+          if (!gpDone && rowText.includes('eqt x general partner sarl') && sn.includes('eur') && !sn.includes('upper')) {
+            const v = bestUnfunded();
+            if (v !== null && v > 100) { extracted['c_eur_gp'] = v; gpDone = true; }
+          }
+
+          // Holding SCSP – USD sleeve (USD sheet)
+          if (!usdHoldingDone && rowText.includes('eqt x holding scsp') && sn.includes('usd')) {
+            const v = bestUnfunded();
+            if (v !== null && v > 1000) { extracted['c_usd_holding'] = v; usdHoldingDone = true; }
+          }
+        });
+      });
+
+      // ── Extract fund name from Fund Family column or Legal Entity ──
+      let fundName = '';
+      wb.SheetNames.forEach(sn => {
+        if (fundName) return;
+        const ws2 = wb.Sheets[sn];
+        const rows2 = XLSX.utils.sheet_to_json(ws2, {header:1, defval:''});
+        // Look for Fund Family column (usually col G = index 6)
+        rows2.forEach(row => {
+          if (fundName) return;
+          // Try Fund Family column (last header col typically)
+          for (let ci = 0; ci < row.length; ci++) {
+            const v = String(row[ci] || '').trim();
+            if (v && v.length > 2 && v.length < 30 && !/\d{6,}/.test(v) &&
+                !['legal entity','vehicle','investor','commitment','currency','fund family','unfunded'].some(k => v.toLowerCase().includes(k))) {
+              // Check if a different cell in same row has "Fund Family" header text
+              const headerRow = rows2[0] || [];
+              const ffIdx = headerRow.findIndex(h => String(h).toLowerCase().includes('fund family'));
+              if (ffIdx >= 0 && row[ffIdx] && String(row[ffIdx]).trim()) {
+                fundName = String(row[ffIdx]).trim();
+                return;
+              }
+            }
+          }
+        });
+      });
+      // Fallback: derive from "EQT X - EUR" style legal entity name → "EQT X"
+      if (!fundName) {
+        wb.SheetNames.forEach(sn => {
+          if (fundName) return;
+          const ws2 = wb.Sheets[sn];
+          const rows2 = XLSX.utils.sheet_to_json(ws2, {header:1, defval:''});
+          for (let ri = 1; ri < rows2.length && ri < 5; ri++) {
+            const v = String(rows2[ri][0] || '').trim();
+            if (v && v.includes(' - ')) { fundName = v.split(' - ')[0].trim(); break; }
+            if (v && !v.toLowerCase().startsWith('subtotal') && !v.toLowerCase().startsWith('grand')) {
+              // strip trailing currency suffix e.g. "(EUR)" or "EUR SCSp"
+              const clean = v.replace(/\s*[\(\-]\s*(EUR|USD|GBP|CHF)\b.*$/i,'').trim();
+              if (clean.length > 2) { fundName = clean; break; }
+            }
+          }
+        });
+      }
+      if (fundName) updateFundName(fundName);
+
+      // ── Populate fields & build preview ─────────────────────────
+      const fn = fundName || 'Fund';
+      const allTargets = [
+        { id:'c_eur_main',         label: fn + ' – EUR',                                       ccy:'EUR', source:'EUR Feeder sheet'                        },
+        { id:'c_eur_employee',     label: fn + ' Employee SCSp',                                ccy:'EUR', source:'EUR Upper & lower — col M (side table)'  },
+        { id:'c_eur_lev_employee', label: fn + ' Leveraged Employee Co-Invest I SCSp',          ccy:'EUR', source:'EUR Upper & lower — col M (side table)'  },
+        { id:'c_eur_holding',      label: fn + ' Holding SCSp – EUR',                           ccy:'EUR', source:'EUR Upper & lower — col M (side table)'  },
+        { id:'c_eur_gp',           label: fn + ' General Partner',                              ccy:'EUR', source:'EUR Upper & lower sheet'                 },
+        { id:'c_usd_main',         label: fn + ' – USD',                                       ccy:'USD', source:'USD Feeder sheet'                        },
+        { id:'c_usd_holding',      label: fn + ' Holding SCSp – USD',                          ccy:'USD', source:'USD Upper & lower sheet'                 },
+      ];
+
+      let filled = 0;
+      const rowsHtml = [];
+
+      allTargets.forEach(t => {
+        const v = extracted[t.id];
+        if (v !== undefined && v !== null) {
+          setAmtField(t.id, v);  // formats with commas
+          filled++;
+          rowsHtml.push(`<div class="parsed-row">
+            <span class="parsed-row-label">${t.label} <span style="font-size:9px;opacity:0.6;">(${t.source})</span></span>
+            <span class="parsed-row-val matched">${t.ccy} ${fmt(v)}</span>
+          </div>`);
+        } else {
+          rowsHtml.push(`<div class="parsed-row">
+            <span class="parsed-row-label">${t.label}</span>
+            <span class="parsed-row-val unmatched">not found</span>
+          </div>`);
+        }
+      });
+
+      document.getElementById('parsed_commitment_rows').innerHTML = rowsHtml.join('');
+      document.getElementById('commitment_file_label').textContent = file.name;
+      document.getElementById('preview_commitment').classList.add('visible');
+      setZoneState('commitment',
+        filled >= 5 ? 'success' : 'error',
+        filled >= 5 ? `${filled}/7 fields populated from ${file.name}` : `Only ${filled}/7 fields found — check sheet names`
+      );
+      updateSpotDisplay();
+    } catch(err) {
+      setZoneState('commitment', 'error', 'Parse error: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HEDGE PDF PARSER — detects CCY pair + notional + Annex A
+// ════════════════════════════════════════════════════════════════════
+async function parseHedgePDF(file, type) {
+  setZoneState(type,'loading','Parsing PDF…');
+  const slotNum = parseInt(type.replace('bank_',''));
+  try {
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data:ab}).promise;
+    let fullText = '';
+    for (let p=1; p<=pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      fullText += content.items.map(i => i.str).join(' ') + '\n';
+    }
+
+    // ── Detect CCY pair ──────────────────────────────────────────
+    // In a DCFX confirmation:
+    //   "Amount and currency payable by Bank: USD [notional]"
+    //     → Bank pays USD to the fund  → USD is the DEAL CCY (quoteCcy)
+    //   "Amount and currency payable by Counterparty: EUR [amount]"
+    //     → Fund pays EUR to the bank  → EUR is the BASE CCY (fund's home CCY, baseCcy)
+    // Rate in Annex A = "USD per EUR 1.00" → quoteCcy per baseCcy
+    let quoteCcy = null;  // deal CCY (what bank pays fund, e.g. USD)
+    let baseCcy  = null;  // fund's CCY (what fund pays bank, e.g. EUR)
+
+    // Broad regex: allow any chars (incl. newlines) between label and CCY code
+    // Look for "payable by Bank" → next 3-letter CCY
+    const bankMatch = fullText.match(/payable\s+by\s+Bank[^\n]{0,120}?:\s*([A-Z]{3})\s+[\d,]+/i)
+                   || fullText.match(/payable\s+by\s+(?:Party\s*A|Bank)[^:]{0,80}:\s*([A-Z]{3})/i)
+                   || fullText.match(/Amount and currency payable by Bank[^$]{0,200}?([A-Z]{3})\s+[\d,]{6,}/i);
+    if (bankMatch) quoteCcy = bankMatch[1].toUpperCase();
+
+    // Look for "payable by Counterparty" → next 3-letter CCY
+    const cpMatch = fullText.match(/payable\s+by\s+Counterparty[^\n]{0,120}?:\s*([A-Z]{3})\b/i)
+                 || fullText.match(/payable\s+by\s+(?:Party\s*B|Counterparty)[^:]{0,80}:\s*([A-Z]{3})/i)
+                 || fullText.match(/Amount and currency payable by Counterparty[^$]{0,200}?([A-Z]{3})\s+/i);
+    if (cpMatch) baseCcy = cpMatch[1].toUpperCase();
+
+    // Fallback: scan for "USD Amount" / "EUR Amount" terminology used in these contracts
+    if (!quoteCcy) {
+      const m = fullText.match(/([A-Z]{3})\s+[\d,]+(?:\.\d+)?\s*\(?["""]?USD Amount["""]?\)?/i)
+             || fullText.match(/\("([A-Z]{3}) Amount"\)/i)
+             || fullText.match(/([A-Z]{3})\s+(?:[\d,]+\.?\d*)\s*\("([A-Z]{3})\s+Amount"\)/i);
+      if (m) quoteCcy = (m[2] || m[1]).toUpperCase();
+    }
+    if (!baseCcy) {
+      // EUR Amount is typically what counterparty pays
+      const m = fullText.match(/An amount in ([A-Z]{3}) equal to/i)
+             || fullText.match(/amount in ([A-Z]{3})\s+equal\s+to/i);
+      if (m) baseCcy = m[1].toUpperCase();
+    }
+
+    // Fallback 2: look for explicit FX pair string e.g. "EUR/USD Forward"
+    if (!quoteCcy || !baseCcy) {
+      const pairMatch = fullText.match(/\b(EUR|GBP|USD|CHF|JPY|SEK|NOK|DKK)\s*\/\s*(EUR|GBP|USD|CHF|JPY|SEK|NOK|DKK)\b/i);
+      if (pairMatch) {
+        // In "EUR/USD", EUR is base and USD is quote (deal CCY)
+        if (!baseCcy)  baseCcy  = pairMatch[1].toUpperCase();
+        if (!quoteCcy) quoteCcy = pairMatch[2].toUpperCase();
+      }
+    }
+
+    // Sanity: if both ended up the same, reset one
+    if (quoteCcy && baseCcy && quoteCcy === baseCcy) baseCcy = null;
+
+    // Ultimate defaults
+    if (!baseCcy)  baseCcy  = 'EUR';
+    if (!quoteCcy) quoteCcy = 'USD';
+
+    // ── Extract notional (quoteCcy — deal CCY that bank pays) ──────
+    // The "Amount payable by Bank" IS the notional in deal CCY (e.g. USD 500,000,000)
+    let notional = null;
+    if (bankMatch) {
+      // Try to extract the number from the bankMatch context
+      const numM = bankMatch[0].match(/([\d,]+\.\d{2})/);
+      if (numM) notional = parseFloat(numM[1].replace(/,/g,''));
+    }
+    if (!notional) {
+      // Search for "[quoteCcy] [large number]" pattern
+      const re = new RegExp(quoteCcy + '\\s+([\\d,]+\\.\\d{2})','i');
+      const m = fullText.match(re);
+      if (m) notional = parseFloat(m[1].replace(/,/g,''));
+    }
+    // Also try the "USD Amount" explicit label used in these contracts
+    if (!notional) {
+      const m = fullText.match(new RegExp(quoteCcy + '\\s+([\\d,]+\\.?\\d*)\\s*\\(?["""]?' + quoteCcy + '\\s+Amount', 'i'));
+      if (m) notional = parseFloat(m[1].replace(/,/g,''));
+    }
+    // Sanity check range (1M – 10B)
+    if (notional && (notional < 1e6 || notional > 10e9)) notional = null;
+
+    // ── Annex A rate table ───────────────────────────────────────
+    const annexRates = {};
+    const MONTHS = {jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    function normDate(raw) {
+      raw = raw.trim();
+      let m = raw.match(/^(\d{1,2})[-\/]([A-Za-z]{3})[-\/](\d{4})$/);
+      if (m) { const mo=MONTHS[m[2].toLowerCase()]; if (mo) return `${m[3]}-${mo}-${m[1].padStart(2,'0')}`; }
+      m = raw.match(/^([A-Za-z]{3})\s+(\d{1,2})[,\s]+(\d{4})$/);
+      if (m) { const mo=MONTHS[m[1].toLowerCase()]; if (mo) return `${m[3]}-${mo}-${m[2].padStart(2,'0')}`; }
+      m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+      return null;
+    }
+    // Determine plausible rate range from CCY pair
+    // EUR/USD ~ 1.05–1.25; EUR/GBP ~ 0.82–0.92; USD/GBP ~ 0.7–0.85; GBP/USD ~ 1.2–1.4
+    const rateRanges = {
+      'EURUSD':[1.0,1.5],'USDEUR':[0.7,1.1],'EURGBP':[0.7,1.0],'GBPEUR':[1.0,1.4],
+      'GBPUSD':[1.1,1.5],'USDGBP':[0.6,1.0],'EURSEK':[9,12],'EURNOK':[10,13],
+      'EURCHF':[0.9,1.1],'CHFEUR':[0.9,1.1],'EURJPY':[130,170],'USDJPY':[120,165],
+    };
+    // Rate in Annex A is expressed as quoteCcy per baseCcy 1.00
+    // e.g. for USD/EUR contracts: rate ~1.14 (USD per EUR)
+    const pairKey = (quoteCcy + baseCcy).toUpperCase();
+    const [rMin, rMax] = rateRanges[pairKey] || [0.5, 200];
+    const tokens = fullText.split(/\s+/).filter(Boolean);
+    for (let i=0; i<tokens.length-3; i++) {
+      let ds = normDate(tokens[i]);
+      if (!ds && i+1<tokens.length) { ds=normDate(tokens[i]+'-'+tokens[i+1]); if (ds) i++; }
+      if (!ds || ds<'2020-01-01' || ds>'2030-01-01') continue;
+      for (let j=i+1; j<=i+5 && j<tokens.length; j++) {
+        const v=parseFloat(tokens[j].replace(/,/g,''));
+        if (!isNaN(v) && v>=rMin && v<=rMax) { annexRates[ds]=v; break; }
+      }
+    }
+    const annexCount = Object.keys(annexRates).length;
+    if (annexCount > 5) liveAnnex['slot_'+slotNum] = annexRates;
+
+    // ── Push to matching hedge block ─────────────────────────────
+    const hedgeIds = getHedgeIds();
+    const targetHid = hedgeIds[slotNum-1];
+    if (targetHid) {
+      if (notional) { setAmtField('hedge_notional_'+targetHid, notional); }
+      // Set CCY fields
+      const bEl = document.getElementById('hedge_base_ccy_'+targetHid);
+      const qEl = document.getElementById('hedge_quote_ccy_'+targetHid);
+      if (bEl) { bEl.value = baseCcy; flashField('hedge_base_ccy_'+targetHid); }
+      if (qEl) { qEl.value = quoteCcy; flashField('hedge_quote_ccy_'+targetHid); }
+      updateHedgeMeta(targetHid);
+    }
+    autoPopulateRates();
+
+    // ── Preview ──────────────────────────────────────────────────
+    const prevRows = [];
+    prevRows.push(`<div class="parsed-row"><span class="parsed-row-label">Bank ${slotNum} — CCY Pair</span><span class="parsed-row-val matched">${baseCcy} / ${quoteCcy}</span></div>`);
+    prevRows.push(`<div class="parsed-row"><span class="parsed-row-label">Bank ${slotNum} — Notional (${quoteCcy})</span><span class="parsed-row-val ${notional?'matched':'unmatched'}">${notional?quoteCcy+' '+fmt(notional):'not found'}</span></div>`);
+    prevRows.push(`<div class="parsed-row"><span class="parsed-row-label">Bank ${slotNum} — Annex A rows</span><span class="parsed-row-val ${annexCount>5?'matched':'unmatched'}">${annexCount} date/rate pairs</span></div>`);
+    Object.entries(annexRates).slice(0,2).forEach(([d,r]) => prevRows.push(`<div class="parsed-row"><span class="parsed-row-label">&nbsp;&nbsp;${d}</span><span class="parsed-row-val matched">${r}</span></div>`));
+    if (annexCount>2) prevRows.push(`<div class="parsed-row"><span class="parsed-row-label">&nbsp;&nbsp;… ${annexCount-2} more</span><span class="parsed-row-val"></span></div>`);
+    document.getElementById('parsed_hedge_rows').innerHTML += prevRows.join('');
+    document.getElementById('preview_hedges').classList.add('visible');
+    setZoneState(type, notional && annexCount>5 ? 'success':'error',
+      notional && annexCount>5 ? `${baseCcy}/${quoteCcy} • Notional + ${annexCount} rates` : `Partial: CCY=${baseCcy}/${quoteCcy}, notional=${notional?'✓':'✗'}, rows=${annexCount}`);
+    updateSpotDisplay();
+  } catch(err) { setZoneState(type,'error','Parse error: '+err.message); console.error(err); }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// EMBEDDED ANNEX A FALLBACKS
+// ════════════════════════════════════════════════════════════════════
+const embeddedAnnex = {
+  slot_1: {"2025-09-10":1.15667,"2025-09-11":1.15673,"2025-09-12":1.15678,"2025-09-15":1.15694,"2025-09-16":1.15699,"2025-09-17":1.15704,"2025-09-18":1.15710,"2025-09-19":1.15715,"2025-09-22":1.15731,"2025-09-23":1.15736,"2025-09-24":1.15741,"2025-09-25":1.15747,"2025-09-26":1.15752,"2025-09-29":1.15768,"2025-09-30":1.15773,"2025-10-01":1.15778,"2025-10-02":1.15784,"2025-10-03":1.15789,"2025-10-06":1.15805,"2025-10-07":1.15810,"2025-10-08":1.15815,"2025-10-09":1.15821,"2025-10-10":1.15826,"2025-10-13":1.15842,"2025-10-14":1.15847,"2025-10-15":1.15852,"2025-10-16":1.15858,"2025-10-17":1.15863,"2025-10-20":1.15879,"2025-10-21":1.15884,"2025-10-22":1.15889,"2025-10-23":1.15895,"2025-10-24":1.15900,"2025-10-27":1.15916,"2025-10-28":1.15921,"2025-10-29":1.15927,"2025-10-30":1.15932,"2025-10-31":1.15937,"2025-11-03":1.15954,"2025-11-04":1.15960,"2025-11-05":1.15965,"2025-11-06":1.15971,"2025-11-07":1.15976,"2025-11-10":1.15993,"2025-11-11":1.15999,"2025-11-12":1.16004,"2025-11-13":1.16010,"2025-11-14":1.16016,"2025-11-17":1.16033,"2025-11-18":1.16038,"2025-11-19":1.16044,"2025-11-20":1.16049,"2025-11-21":1.16055,"2025-11-24":1.16072,"2025-11-25":1.16077,"2025-11-26":1.16083,"2025-11-27":1.16089,"2025-11-28":1.16094,"2025-12-01":1.16111,"2025-12-02":1.16117,"2025-12-03":1.16122,"2025-12-04":1.16128,"2025-12-05":1.16134,"2025-12-08":1.16150,"2025-12-09":1.16156,"2025-12-10":1.16162,"2025-12-11":1.16167,"2025-12-12":1.16173,"2025-12-15":1.16190,"2025-12-16":1.16195,"2025-12-17":1.16201,"2025-12-18":1.16207,"2025-12-19":1.16212,"2025-12-22":1.16229,"2025-12-23":1.16235,"2025-12-24":1.16240,"2025-12-25":1.16246,"2025-12-26":1.16252,"2025-12-29":1.16268,"2025-12-30":1.16274,"2025-12-31":1.16280,"2026-01-01":1.16285,"2026-01-02":1.16291,"2026-01-05":1.16308,"2026-01-06":1.16313,"2026-01-07":1.16319,"2026-01-08":1.16325,"2026-01-09":1.16330,"2026-01-12":1.16347,"2026-01-13":1.16353,"2026-01-14":1.16358,"2026-01-15":1.16364,"2026-01-16":1.16369,"2026-01-19":1.16386,"2026-01-20":1.16392,"2026-01-21":1.16398,"2026-01-22":1.16403,"2026-01-23":1.16409,"2026-01-26":1.16426},
+  slot_2: {}
+};
+[["2025-09-10",1.142915],["2025-09-11",1.142969],["2025-09-12",1.143022],["2025-09-13",1.143076],["2025-09-14",1.143129],["2025-09-15",1.143183],["2025-09-16",1.143236],["2025-09-17",1.143290],["2025-09-18",1.143343],["2025-09-19",1.143397],["2025-09-20",1.143450],["2025-09-21",1.143504],["2025-09-22",1.143557],["2025-09-23",1.143611],["2025-09-24",1.143664],["2025-09-25",1.143718],["2025-09-26",1.143771],["2025-09-27",1.143825],["2025-09-28",1.143879],["2025-09-29",1.143932],["2025-09-30",1.143986],["2025-10-01",1.144039],["2025-10-02",1.144093],["2025-10-03",1.144146],["2025-10-04",1.144200],["2025-10-05",1.144253],["2025-10-06",1.144307],["2025-10-07",1.144360],["2025-10-08",1.144414],["2025-10-09",1.144467],["2025-10-10",1.144521],["2025-10-11",1.144574],["2025-10-12",1.144628],["2025-10-13",1.144681],["2025-10-14",1.144735],["2025-10-15",1.144789],["2025-10-16",1.144842],["2025-10-17",1.144896],["2025-10-18",1.144949],["2025-10-19",1.145003],["2025-10-20",1.145056],["2025-10-21",1.145110],["2025-10-22",1.145163],["2025-10-23",1.145217],["2025-10-24",1.145270],["2025-10-25",1.145324],["2025-10-26",1.145377],["2025-10-27",1.145431],["2025-10-28",1.145484],["2025-10-29",1.145538],["2025-10-30",1.145591],["2025-10-31",1.145645],["2025-11-01",1.145706],["2025-11-02",1.145766],["2025-11-03",1.145827],["2025-11-04",1.145887],["2025-11-05",1.145948],["2025-11-06",1.146008],["2025-11-07",1.146069],["2025-11-08",1.146130],["2025-11-09",1.146190],["2025-11-10",1.146251],["2025-11-11",1.146311],["2025-11-12",1.146372],["2025-11-13",1.146432],["2025-11-14",1.146493],["2025-11-15",1.146554],["2025-11-16",1.146614],["2025-11-17",1.146675],["2025-11-18",1.146735],["2025-11-19",1.146796],["2025-11-20",1.146856],["2025-11-21",1.146917],["2025-11-22",1.146978],["2025-11-23",1.147038],["2025-11-24",1.147099],["2025-11-25",1.147159],["2025-11-26",1.147220],["2025-11-27",1.147281],["2025-11-28",1.147341],["2025-11-29",1.147402],["2025-11-30",1.147462],["2025-12-01",1.147523],["2025-12-02",1.147583],["2025-12-03",1.147644],["2025-12-04",1.147705],["2025-12-05",1.147765],["2025-12-06",1.147826],["2025-12-07",1.147886],["2025-12-08",1.147947],["2025-12-09",1.148007],["2025-12-10",1.148068],["2025-12-11",1.148129],["2025-12-12",1.148189],["2025-12-13",1.148250],["2025-12-14",1.148310],["2025-12-15",1.148371],["2025-12-16",1.148431],["2025-12-17",1.148492],["2025-12-18",1.148553],["2025-12-19",1.148613],["2025-12-20",1.148674],["2025-12-21",1.148734],["2025-12-22",1.148795],["2025-12-23",1.148855],["2025-12-24",1.148916],["2025-12-25",1.148977],["2025-12-26",1.149037],["2025-12-27",1.149098],["2025-12-28",1.149158],["2025-12-29",1.149219],["2025-12-30",1.149279],["2025-12-31",1.149340],["2026-01-01",1.149401],["2026-01-02",1.149461],["2026-01-03",1.149522],["2026-01-04",1.149582],["2026-01-05",1.149643],["2026-01-06",1.149704],["2026-01-07",1.149764],["2026-01-08",1.149825],["2026-01-09",1.149885],["2026-01-10",1.149946],["2026-01-11",1.150006],["2026-01-12",1.150067],["2026-01-13",1.150128],["2026-01-14",1.150188],["2026-01-15",1.150249],["2026-01-16",1.150309],["2026-01-17",1.150370],["2026-01-18",1.150430],["2026-01-19",1.150491],["2026-01-20",1.150552],["2026-01-21",1.150612],["2026-01-22",1.150673],["2026-01-23",1.150733],["2026-01-24",1.150794],["2026-01-25",1.150854],["2026-01-26",1.150915]
+].forEach(([d,r]) => embeddedAnnex.slot_2[d] = r);
+
+// ════════════════════════════════════════════════════════════════════
+// RATE AUTO-POPULATION
+// ════════════════════════════════════════════════════════════════════
+document.getElementById('settlement_date').addEventListener('change', autoPopulateRates);
+function autoPopulateRates() {
+  const d = document.getElementById('settlement_date').value;
+  if (!d) return;
+  getHedgeIds().forEach((hid, i) => {
+    const slotKey = 'slot_'+(i+1);
+    const annex = liveAnnex[slotKey] || embeddedAnnex[slotKey];
+    if (annex && annex[d] !== undefined) { const el = document.getElementById('hedge_rate_'+hid); if (el) { el.value=annex[d]; flashField('hedge_rate_'+hid); } }
+  });
+  updateSpotDisplay();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// LIVE FX RATE FETCH
+// Sources (tried in order):
+//   1. Frankfurter (ECB reference rates, daily, no auth, CORS-open)
+//      https://api.frankfurter.dev/v2/latest?base={QUOTE}&symbols={BASE}
+//   2. ExchangeRate-API open endpoint (no auth, CORS-open) — fallback only
+//      https://open.er-api.com/v6/latest/{QUOTE}
+// Rates are ECB daily reference rates (or open market equivalent for fallback).
+// ════════════════════════════════════════════════════════════════════
+
+function updateFxLabel() {
+  const baseCcy  = (document.getElementById('fx_base_ccy')?.value||'USD').toUpperCase();
+  const quoteCcy = (document.getElementById('fx_quote_ccy')?.value||'EUR').toUpperCase();
+  const lbl = document.getElementById('fx_rate_label');
+  if (lbl) lbl.textContent = baseCcy + ' / ' + quoteCcy;
+  // Clear source badge when pair changes
+  const badge = document.getElementById('fx_rate_source_badge');
+  if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+  setFxStatus('', '');
+  updateSpotDisplay();
+}
+
+function setFxStatus(type, msg) {
+  const el = document.getElementById('fx_live_status');
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; return; }
+  const colours = {
+    loading: 'background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;',
+    success: 'background:var(--green-lt);border:1px solid var(--green-bd);color:var(--green);',
+    error:   'background:var(--red-lt);border:1px solid var(--red-bd);color:var(--red);',
+    warn:    'background:var(--eqt-orange-lt);border:1px solid var(--eqt-orange-md);color:var(--eqt-orange-dk);',
+  };
+  el.style.cssText = 'display:flex;padding:10px 14px;border-radius:5px;font-size:11px;align-items:flex-start;gap:8px;' + (colours[type]||'');
+  el.innerHTML = msg;
+}
+
+function setRateSourceBadge(text, isLive) {
+  const badge = document.getElementById('fx_rate_source_badge');
+  if (!badge) return;
+  badge.textContent = text;
+  badge.style.display = 'inline-flex';
+  badge.style.background   = isLive ? 'var(--green-lt)' : 'var(--eqt-orange-lt)';
+  badge.style.color        = isLive ? 'var(--green)'    : 'var(--eqt-orange-dk)';
+  badge.style.border       = isLive ? '1px solid var(--green-bd)' : '1px solid var(--eqt-orange-md)';
+}
+
+async function fetchLiveRate() {
+  const base  = (document.getElementById('fx_base_ccy')?.value||'USD').toUpperCase();  // e.g. USD
+  const quote = (document.getElementById('fx_quote_ccy')?.value||'EUR').toUpperCase(); // e.g. EUR
+  const btn   = document.getElementById('fetch_rate_btn');
+  if (base === quote) { setFxStatus('warn', '⚠ Base and quote CCY are the same — rate is 1.00.'); document.getElementById('fx_split').value = '1.0'; setRateSourceBadge('Same CCY', false); updateSpotDisplay(); return; }
+
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  setFxStatus('loading', '<span class="spinner"></span> Fetching ECB reference rate…');
+
+  let rate = null;
+  let source = '';
+  let ts = '';
+
+  try {
+    // ── Try 1: Frankfurter (ECB reference rate) ──────────────────
+    // Rate = base per 1 quote  (e.g. USD per 1 EUR)
+    const url1 = `https://api.frankfurter.dev/v2/latest?base=${quote}&symbols=${base}`;
+    const r1 = await fetch(url1, {signal: AbortSignal.timeout(6000)});
+    if (r1.ok) {
+      const d = await r1.json();
+      if (d.rates && d.rates[base] !== undefined) {
+        rate   = d.rates[base];
+        source = 'ECB';
+        ts     = d.date || 'today';
+      }
+    }
+  } catch(_) {}
+
+  if (!rate) {
+    try {
+      // ── Try 2: ExchangeRate-API open endpoint ────────────────────
+      // Returns: { rates: { USD: x, EUR: y … } } with quote as base
+      const url2 = `https://open.er-api.com/v6/latest/${quote}`;
+      const r2 = await fetch(url2, {signal: AbortSignal.timeout(6000)});
+      if (r2.ok) {
+        const d = await r2.json();
+        if (d.rates && d.rates[base] !== undefined) {
+          rate   = d.rates[base];
+          source = 'Open Market (fallback)';
+          ts     = d.time_last_update_utc ? d.time_last_update_utc.split(' ').slice(0,4).join(' ') : 'today';
+        }
+      }
+    } catch(_) {}
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+
+  if (rate) {
+    document.getElementById('fx_split').value = rate.toFixed(6);
+    flashField('fx_split');
+    setRateSourceBadge('Live · ' + source.split(' ')[0], true);
+    setFxStatus('success',
+      `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10.5l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><strong>${base}/${quote} = ${rate.toFixed(6)}</strong> &nbsp;·&nbsp; ${source} Reference Rate &nbsp;·&nbsp; as of ${ts}<br>
+      <span style="font-size:10px;opacity:0.8;margin-top:3px;display:block;">
+        ⚠ Per dual-currency mechanics, this rate must be backdated to 15 business days before the utilisation date. Use the date picker below to fetch the ECB rate for that specific date.
+      </span></span>`);
+    // Show historical date picker
+    document.getElementById('fx_historical_row').style.display = 'block';
+    updateSpotDisplay();
+  } else {
+    setFxStatus('error',
+      `✗ Could not fetch ${base}/${quote} — ECB data source unavailable. Check your internet connection or enter the rate manually. You can look it up at <a href="https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html" target="_blank" style="color:inherit;text-decoration:underline;">ECB reference rates</a>.`);
+  }
+}
+
+async function fetchHistoricalRate() {
+  const base  = (document.getElementById('fx_base_ccy')?.value||'USD').toUpperCase();
+  const quote = (document.getElementById('fx_quote_ccy')?.value||'EUR').toUpperCase();
+  const date  = document.getElementById('fx_historical_date')?.value;
+  const resEl = document.getElementById('fx_historical_result');
+
+  if (!date) { resEl.textContent = 'Select a date first'; resEl.style.color='var(--red)'; return; }
+  if (base === quote) { resEl.textContent = '1.000000'; document.getElementById('fx_split').value = '1.0'; updateSpotDisplay(); return; }
+
+  resEl.textContent = 'Fetching…';
+  resEl.style.color = 'var(--amber)';
+
+  let rate = null, source = '';
+  try {
+    // Frankfurter historical: /v2/rates?date=YYYY-MM-DD&base=QUOTE&symbols=BASE
+    const url = `https://api.frankfurter.dev/v2/rates?date=${date}&base=${quote}&symbols=${base}`;
+    const r = await fetch(url, {signal: AbortSignal.timeout(6000)});
+    if (r.ok) {
+      const d = await r.json();
+      if (d.rates?.[base]) { rate = d.rates[base]; source = 'ECB'; }
+    }
+  } catch(_) {}
+
+  if (!rate) {
+    try {
+      // ExchangeRate-API historical
+      const [y,m,dy] = date.split('-');
+      const url = `https://v6.exchangerate-api.com/v6/latest/${quote}`; // free tier no historical, skip
+      // Alternative: open historical from frankfurter only
+    } catch(_) {}
+  }
+
+  if (rate) {
+    resEl.textContent = base+'/'+quote+' = '+rate.toFixed(6)+' ('+source+', '+date+')';
+    resEl.style.color = 'var(--green)';
+    // Apply it to the main rate field
+    document.getElementById('fx_split').value = rate.toFixed(6);
+    setRateSourceBadge(source+' · '+date, true);
+    flashField('fx_split');
+    updateSpotDisplay();
+    setFxStatus('success',
+      `<svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;margin-top:1px"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10.5l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><strong>${base}/${quote} = ${rate.toFixed(6)}</strong> applied &nbsp;·&nbsp; Historical ${source} rate for ${date}<br>
+      <span style="font-size:10px;opacity:0.8;display:block;margin-top:2px;">ECB daily reference rate for ${date}. Verify at <a href="https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html" target="_blank" style="color:inherit;text-decoration:underline;">ecb.europa.eu</a> before finalising.</span></span>`);
+  } else {
+    resEl.textContent = 'Not available for this date — enter manually';
+    resEl.style.color = 'var(--red)';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// AMOUNT FIELD FORMATTING  (comma-separated thousands)
+// Fields stay as type="text"; commas are shown on blur, stripped on
+// focus so the user can type naturally. parseAmt() strips commas
+// before any arithmetic.
+// ════════════════════════════════════════════════════════════════════
+
+// Strip commas and parse to float (returns 0 for empty / invalid)
+function parseAmt(v) {
+  if (v === null || v === undefined) return 0;
+  const n = parseFloat(String(v).replace(/,/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+// Format a number for display in the input (e.g. 9496083515.57 → "9,496,083,515.57")
+function fmtAmtDisplay(n) {
+  if (n === null || n === undefined || n === '' || isNaN(Number(n))) return '';
+  const num = Number(String(n).replace(/,/g, ''));
+  if (isNaN(num)) return '';
+  // Preserve decimals exactly as typed; show at least 2dp if value has decimals
+  const str = String(n).replace(/,/g, '');
+  const parts = str.split('.');
+  const intPart = parseInt(parts[0], 10).toLocaleString('en-US');
+  return parts.length > 1 ? intPart + '.' + parts[1] : intPart;
+}
+
+// All static amount field IDs
+const AMT_FIELD_IDS = [
+  'c_eur_main','c_eur_employee','c_eur_lev_employee','c_eur_holding','c_eur_gp',
+  'c_usd_main','c_usd_holding','equity_ticket'
+];
+
+function attachAmtFormatting(el) {
+  if (!el || el.dataset.amtBound) return;
+  el.dataset.amtBound = '1';
+
+  // On focus: strip commas so user can edit raw number
+  el.addEventListener('focus', () => {
+    el.value = el.value.replace(/,/g, '');
+  });
+
+  // On blur: reformat with commas
+  el.addEventListener('blur', () => {
+    const raw = el.value.replace(/,/g, '').trim();
+    if (raw === '' || isNaN(Number(raw))) return;
+    el.value = fmtAmtDisplay(raw);
+    updateSpotDisplay();
+  });
+
+  // On input: allow only digits, one dot, one leading minus
+  el.addEventListener('input', () => {
+    // Strip any accidentally typed commas mid-edit
+    const pos = el.selectionStart;
+    const before = el.value;
+    const cleaned = before.replace(/[^0-9.\-]/g, '');
+    if (cleaned !== before) {
+      el.value = cleaned;
+      el.setSelectionRange(Math.max(0, pos - (before.length - cleaned.length)), Math.max(0, pos - (before.length - cleaned.length)));
+    }
+    updateSpotDisplay();
+  });
+}
+
+// Wire up static fields
+function initAmtFields() {
+  AMT_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) attachAmtFormatting(el);
+  });
+}
+
+// Wire up dynamically created hedge notional fields via delegation
+document.addEventListener('focusin', e => {
+  if (e.target.id?.startsWith('hedge_notional_')) attachAmtFormatting(e.target);
+});
+
+// Set a formatted value into an amount field (used by parser + flashField)
+function setAmtField(id, rawValue) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = fmtAmtDisplay(rawValue);
+  flashField(id);
+}
+// ════════════════════════════════════════════════════════════════════
+// SPOT / DERIVED DISPLAY
+// ════════════════════════════════════════════════════════════════════
+function updateSpotDisplay() {
+  const ticketCcy  = (document.getElementById('ticket_ccy')?.value||'USD').toUpperCase();
+  const ticket     = parseAmt(document.getElementById('equity_ticket')?.value);
+  const fxSplit    = parseFloat(document.getElementById('fx_split')?.value)||1;
+  const c_eur      = ['c_eur_main','c_eur_employee','c_eur_lev_employee','c_eur_holding','c_eur_gp'].reduce((s,id)=>s+parseAmt(document.getElementById(id)?.value),0);
+  const c_usd      = ['c_usd_main','c_usd_holding'].reduce((s,id)=>s+parseAmt(document.getElementById(id)?.value),0);
+  // fx_split = nonEUR CCY per EUR CCY
+  const usdInEur   = c_usd / fxSplit;
+  const eurPct     = c_eur / (c_eur + usdInEur);
+  // EUR sleeve gets eurPct * ticket in deal CCY
+  const eurAllocDealCcy = ticket * eurPct;
+  // Sum hedge notionals (all assumed in deal CCY = Quote CCY)
+  const totalHedgeDealCcy = getHedgeIds().reduce((s,hid)=>{
+    return s + parseAmt(document.getElementById('hedge_notional_'+hid)?.value);
+  }, 0);
+  const spotDealCcy = eurAllocDealCcy - totalHedgeDealCcy;
+  const spotRate    = parseFloat(document.getElementById('spot_rate')?.value)||1;
+  const spotBaseCcy = spotDealCcy / spotRate; // Convert deal CCY to EUR/base CCY
+
+  // Infer base CCY label from first hedge
+  const ids = getHedgeIds();
+  const baseCcyLabel = ids.length && hedgeMeta[ids[0]] ? hedgeMeta[ids[0]].baseCcy : 'EUR';
+
+  const el = document.getElementById('spot_deal_display');
+  if (el) { el.style.color = spotDealCcy<0?'var(--red)':'var(--text-3)'; el.textContent = ticketCcy+' '+fmt(spotDealCcy)+(spotDealCcy<0?' ⚠':''); }
+  const el2 = document.getElementById('spot_eur_display');
+  if (el2) el2.textContent = baseCcyLabel+' '+fmt(spotBaseCcy);
+}
+
+['equity_ticket','fx_split','spot_rate','c_eur_main','c_eur_employee','c_eur_lev_employee','c_eur_holding','c_eur_gp','c_usd_main','c_usd_holding','ticket_ccy','fx_base_ccy','fx_quote_ccy']
+  .forEach(id => document.getElementById(id)?.addEventListener('input', updateSpotDisplay));
+document.addEventListener('input', e => { if (e.target.id?.startsWith('hedge_')) updateSpotDisplay(); });
+
+// Auto-fetch live rate when CCY pair inputs stop changing (500ms debounce)
+let _fxFetchTimer = null;
+function scheduleFxFetch() {
+  clearTimeout(_fxFetchTimer);
+  _fxFetchTimer = setTimeout(() => {
+    const base  = (document.getElementById('fx_base_ccy')?.value||'').toUpperCase();
+    const quote = (document.getElementById('fx_quote_ccy')?.value||'').toUpperCase();
+    if (base.length === 3 && quote.length === 3 && base !== quote) fetchLiveRate();
+  }, 600);
+}
+document.getElementById('fx_base_ccy')?.addEventListener('input', scheduleFxFetch);
+document.getElementById('fx_quote_ccy')?.addEventListener('input', scheduleFxFetch);
+
+// ════════════════════════════════════════════════════════════════════
+// FORMAT
+// ════════════════════════════════════════════════════════════════════
+function fmt(n, d=2) {
+  if (n===null||isNaN(n)) return '—';
+  return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+
+// ════════════════════════════════════════════════════════════════════
+// CALCULATE
+// ════════════════════════════════════════════════════════════════════
+function calculate() {
+  // --- Sleeve commitments ---
+  const c_eur = ['c_eur_main','c_eur_employee','c_eur_lev_employee','c_eur_holding','c_eur_gp'].reduce((s,id)=>s+parseAmt(document.getElementById(id).value),0);
+  const c_usd = ['c_usd_main','c_usd_holding'].reduce((s,id)=>s+parseAmt(document.getElementById(id).value),0);
+
+  // --- CCY context ---
+  const ticketCcy  = (document.getElementById('ticket_ccy').value||'USD').toUpperCase();
+  const fxBaseCcy  = (document.getElementById('fx_base_ccy').value||'USD').toUpperCase();   // non-EUR sleeve CCY
+  const fxQuoteCcy = (document.getElementById('fx_quote_ccy').value||'EUR').toUpperCase();  // EUR sleeve CCY
+  const fxSplit    = parseFloat(document.getElementById('fx_split').value)||1; // fxBaseCcy per fxQuoteCcy
+
+  // Infer EUR (base/quote) CCY from hedges
+  const ids = getHedgeIds();
+  const eurCcy  = ids.length && hedgeMeta[ids[0]] ? hedgeMeta[ids[0]].baseCcy  : fxQuoteCcy; // what fund receives (EUR equiv)
+  const dealCcy = ids.length && hedgeMeta[ids[0]] ? hedgeMeta[ids[0]].quoteCcy : ticketCcy;  // deal CCY (what fund pays)
+
+  // --- Sleeve % ---
+  // c_eur is in EUR CCY, c_usd is in non-EUR CCY
+  // Convert non-EUR to EUR equiv using fxSplit (fxBaseCcy per eurCcy)
+  const nonEurInEur = c_usd / fxSplit;
+  const eurPct  = c_eur / (c_eur + nonEurInEur);
+  const nonPct  = nonEurInEur / (c_eur + nonEurInEur);
+
+  // --- Ticket allocation ---
+  const ticket       = parseAmt(document.getElementById('equity_ticket').value);
+  const eurAllocDeal = ticket * eurPct;   // in deal CCY (ticket CCY)
+  const nonAllocDeal = ticket * nonPct;   // in deal CCY
+
+  // --- Hedge breakdown (EUR sleeve) ---
+  const spotRate   = parseFloat(document.getElementById('spot_rate').value)||1;
+  const settlDate  = document.getElementById('settlement_date').value;
+  let totalHedgedDeal = 0;
+  const hedgeRows = [];
+
+  ids.forEach((hid, i) => {
+    const slotKey  = 'slot_'+(i+1);
+    const hBase    = hedgeMeta[hid]?.baseCcy  || eurCcy;
+    const hQuote   = hedgeMeta[hid]?.quoteCcy || dealCcy;
+    const notional = parseAmt(document.getElementById('hedge_notional_'+hid).value); // in deal CCY
+    const rate     = parseFloat(document.getElementById('hedge_rate_'+hid).value)||1;     // deal CCY per EUR
+    const eurEquiv = notional / rate;  // convert deal CCY → EUR equiv
+    const src      = liveAnnex[slotKey] ? '(PDF ✓)' : (embeddedAnnex[slotKey]?.[settlDate] ? '(embedded ✓)' : '(manual)');
+    totalHedgedDeal += notional;
+    hedgeRows.push({label:'Bank '+(i+1), notional, rate, eurEquiv, hBase, hQuote, src});
+  });
+
+  // Spot top-up
+  const spotDealCcy  = eurAllocDeal - totalHedgedDeal;
+  const spotEurEquiv = spotDealCcy / spotRate;
+
+  // EUR sleeve: sum all hedge EUR equiv + spot EUR equiv
+  const amountEur = hedgeRows.reduce((s,h)=>s+h.eurEquiv,0) + spotEurEquiv;
+  // Non-EUR sleeve: deal CCY allocation converted to non-EUR sleeve CCY
+  // If deal CCY == non-EUR sleeve CCY, it's just nonAllocDeal.
+  // If they differ (rare), the user would need another conversion — for now treat as same.
+  const amountNonEur = nonAllocDeal; // in non-EUR sleeve CCY (= deal CCY typically)
+
+  // --- Render results ---
+  document.getElementById('results_section').style.display = 'block';
+  document.getElementById('res_sleeve1_label').textContent = eurCcy + ' Sleeve';
+  document.getElementById('res_sleeve2_label').textContent = (fxBaseCcy||dealCcy) + ' Sleeve';
+  document.getElementById('out_sleeve1').textContent = eurCcy  + ' ' + fmt(amountEur);
+  document.getElementById('out_sleeve2').textContent = dealCcy + ' ' + fmt(amountNonEur);
+  document.getElementById('out_sleeve1_sub').textContent = eurCcy  + ' sleeve: ' + (eurPct*100).toFixed(4) + '% of total ticket';
+  document.getElementById('out_sleeve2_sub').textContent = dealCcy + ' sleeve: ' + (nonPct*100).toFixed(4) + '% of total ticket';
+
+  // --- GP Stake ---
+  // For EQT X: use GP commitment / Total EUR sleeve from Final Close Commitments file.
+  // For all other funds: fall back to GP unfunded / total EUR sleeve unfunded from the report.
+  const fn           = detectedFundName || document.querySelector('span.fn')?.textContent || 'Fund';
+  const isEqtX       = EQT_X_FINAL_CLOSE.fundNames.some(n => fn.toLowerCase().includes(n));
+  const c_eur_gp_val = parseAmt(document.getElementById('c_eur_gp').value);
+
+  let gpPct, gpSource, gpCommitment, gpTotalBase, gpBaseLabel;
+
+  if (isEqtX) {
+    // Use Final Close fixed percentage
+    gpPct        = EQT_X_FINAL_CLOSE.gpPct;
+    gpCommitment = EQT_X_FINAL_CLOSE.gpCommitment;
+    gpTotalBase  = EQT_X_FINAL_CLOSE.totalEurSleeve;
+    gpSource     = 'Final Close Commitments';
+    gpBaseLabel  = 'Total ' + eurCcy + ' sleeve (Final Close)';
+  } else {
+    // Fallback: unfunded commitment ratio
+    gpCommitment = c_eur_gp_val;
+    gpTotalBase  = c_eur;
+    gpPct        = c_eur > 0 ? c_eur_gp_val / c_eur : 0;
+    gpSource     = 'Commitment Report (unfunded)';
+    gpBaseLabel  = 'Total ' + eurCcy + ' sleeve (unfunded)';
+  }
+
+  const gpEurAmt  = amountEur * gpPct;    // GP share of Col S
+  const gpDealAmt = eurAllocDeal * gpPct; // GP deal CCY equivalent
+
+  document.getElementById('out_gp').textContent = eurCcy + ' ' + fmt(gpEurAmt);
+  document.getElementById('out_gp_sub').textContent =
+    (gpPct * 100).toFixed(6) + '% of ' + eurCcy + ' sleeve'
+    + ' · ' + dealCcy + ' ' + fmt(gpDealAmt) + ' deal CCY equiv'
+    + ' · Source: ' + gpSource;
+  document.getElementById('tbl_gp').innerHTML =
+    row('GP commitment (' + eurCcy + ')',   eurCcy + ' ' + fmt(gpCommitment)) +
+    row(gpBaseLabel,                        eurCcy + ' ' + fmt(gpTotalBase)) +
+    row('GP % of ' + eurCcy + ' sleeve',   (gpPct * 100).toFixed(6) + '%', true) +
+    row(eurCcy + ' sleeve drawdown (Col S)', eurCcy + ' ' + fmt(amountEur)) +
+    row('GP stake of drawdown',             eurCcy + ' ' + fmt(gpEurAmt), true) +
+    row('Deal CCY equivalent (' + dealCcy + ')', dealCcy + ' ' + fmt(gpDealAmt));
+
+  // --- Amounts to Borrow ---
+  // EUR sleeve: ECL EUR amount minus GP stake
+  const borrowEur = amountEur - gpEurAmt;
+  // USD sleeve: same as ECL USD amount
+  const borrowUsd = amountNonEur;
+
+  document.getElementById('borrow_sleeve1_label').textContent = eurCcy + ' Sleeve';
+  document.getElementById('borrow_sleeve2_label').textContent = (fxBaseCcy||dealCcy) + ' Sleeve';
+  document.getElementById('out_borrow_eur').textContent = eurCcy + ' ' + fmt(borrowEur);
+  document.getElementById('out_borrow_usd').textContent = dealCcy + ' ' + fmt(borrowUsd);
+  document.getElementById('out_borrow_eur_sub').textContent =
+    'ECL ' + eurCcy + ' ' + fmt(amountEur) + ' − GP stake ' + eurCcy + ' ' + fmt(gpEurAmt);
+  document.getElementById('out_borrow_usd_sub').textContent =
+    '= ECL ' + dealCcy + ' amount (unchanged)';
+
+  function row(label, val, sub) { return `<tr${sub?' class="subtotal"':''}><td>${label}</td><td>${val}</td></tr>`; }
+
+  document.getElementById('tbl_sleeve').innerHTML =
+    row('Total '+eurCcy+' Commitments', eurCcy+' '+fmt(c_eur)) +
+    row('Total '+fxBaseCcy+' Commitments', fxBaseCcy+' '+fmt(c_usd)) +
+    row(fxBaseCcy+' → '+eurCcy+' (÷ '+fxSplit+')', eurCcy+' '+fmt(nonEurInEur)) +
+    row(eurCcy+' Sleeve %', (eurPct*100).toFixed(6)+'%', true) +
+    row(fxBaseCcy+' Sleeve %', (nonPct*100).toFixed(6)+'%', true) +
+    row('Ticket × '+eurCcy+' %', dealCcy+' '+fmt(eurAllocDeal)) +
+    row('Ticket × '+fxBaseCcy+' %', dealCcy+' '+fmt(nonAllocDeal));
+
+  let hedgeTblHtml = '';
+  hedgeRows.forEach(h => {
+    hedgeTblHtml += row(h.label+' notional ('+h.hQuote+')', h.hQuote+' '+fmt(h.notional)) +
+      row(h.label+' fwd rate '+h.src+' ('+h.hQuote+'/'+h.hBase+')', fmt(h.rate,6)) +
+      row(h.label+' '+h.hBase+' equiv = notional÷rate', h.hBase+' '+fmt(h.eurEquiv));
+  });
+  hedgeTblHtml += row('Spot top-up ('+dealCcy+')', dealCcy+' '+fmt(spotDealCcy)) +
+    row('Spot rate ('+dealCcy+'/'+eurCcy+')', fmt(spotRate,4)) +
+    row('Spot '+eurCcy+' equiv', eurCcy+' '+fmt(spotEurEquiv)) +
+    row('★ Total '+eurCcy+' Amount (Col S)', eurCcy+' '+fmt(amountEur), true);
+  document.getElementById('tbl_hedge').innerHTML = hedgeTblHtml;
+
+  let fullHtml =
+    row('Fund Remaining Commitments '+eurCcy, eurCcy+' '+fmt(c_eur)) +
+    row('Fund Remaining Commitments '+fxBaseCcy, fxBaseCcy+' '+fmt(c_usd)) +
+    row(fxBaseCcy+' in '+eurCcy+' equiv ('+fxBaseCcy+' ÷ FX)', eurCcy+' '+fmt(nonEurInEur)) +
+    row(eurCcy+' Sleeve %', (eurPct*100).toFixed(6)+'%') +
+    row(fxBaseCcy+' Sleeve %', (nonPct*100).toFixed(6)+'%') +
+    row('Equity Ticket ('+ticketCcy+')', ticketCcy+' '+fmt(ticket)) +
+    row(eurCcy+' Sleeve allocation (ticket × '+eurCcy+'%)', dealCcy+' '+fmt(eurAllocDeal)) +
+    row(fxBaseCcy+' Sleeve allocation (ticket × '+fxBaseCcy+'%)', dealCcy+' '+fmt(nonAllocDeal));
+  hedgeRows.forEach(h => {
+    fullHtml += row(h.label+' notional ('+h.hQuote+')', h.hQuote+' '+fmt(h.notional)) +
+      row(h.label+' '+h.hBase+' = notional ÷ rate', h.hBase+' '+fmt(h.eurEquiv));
+  });
+  fullHtml +=
+    row('Spot top-up = '+eurCcy+' alloc − Σ hedges', dealCcy+' '+fmt(spotDealCcy)) +
+    row('Spot '+eurCcy+' = spot '+dealCcy+' ÷ spot rate', eurCcy+' '+fmt(spotEurEquiv)) +
+    row('★ Amount to Borrow/Invest '+eurCcy+' (Col S)', eurCcy+' '+fmt(amountEur), true) +
+    row('★ Amount to Borrow/Invest '+dealCcy+' (Col T)', dealCcy+' '+fmt(amountNonEur), true);
+  document.getElementById('tbl_full').innerHTML = fullHtml;
+
+  document.getElementById('results_section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function toggleDetails() {
+  document.getElementById('toggle_btn').classList.toggle('open');
+  document.getElementById('details_content').classList.toggle('open');
+}
+</script>
+</body>
+</html>
